@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">眨眼控制</string>
+    <string name="accessibility_label">眨眼控制 · 滑动</string>
+    <string name="accessibility_desc">开启后，眨眼控制可模拟上下滑动，帮你在短视频里翻页。仅在你点“开始”后生效，画面仅本机处理、不上传。</string>
+</resources>

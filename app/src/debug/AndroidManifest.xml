@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  【仅 debug 包】此 manifest 只并入 debug 构建,release 包不含以下任何内容。
+  声明一个 exported 的调试广播接收器,让 adb shell 能触发真实滑动链路做全自主回归测试。
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <receiver
+            android:name=".DebugSwipeReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.eyecontrol.app.DEBUG_SWIPE_SHELL" />
+            </intent-filter>
+        </receiver>
+        <!-- 注入脚本化眨眼序列到运行中的 detector,做无需真人的全自主闭环测试 -->
+        <receiver
+            android:name=".DebugBlinkReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.eyecontrol.app.DEBUG_BLINK_SHELL" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

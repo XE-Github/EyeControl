@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 悬浮窗（精简版）：只显示"状态点 + 连眨计数点"，让用户知道有没有触发。
+     摄像头预览仍保留但缩到 1×1px 近乎不可见——它必须真实渲染，系统才认 App"可见"，
+     从而在刷抖音时不掐断摄像头（"仅前台用相机"限制的绕过）。可拖动。
+     整窗固定尺寸：触发/睁闭/计数变化都不改变窗口大小，避免浏览时窗口跳动。 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="@drawable/overlay_bg"
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <!-- 相机预览块：保活相机的关键，不可 GONE/0 尺寸；缩到 1×1px 近乎不可见。 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="1dp"
+        android:layout_height="1dp" />
+
+    <!-- 状态点：绿=就绪 / 琥珀=学习中 / 蓝=刚触发 -->
+    <View android:id="@+id/stateDot"
+        android:layout_width="10dp" android:layout_height="10dp"
+        android:layout_marginStart="2dp"
+        android:background="@drawable/dot_gray" />
+
+    <!-- 状态文字：固定宽度，触发时闪一下"下一个/上一个"也不撑大窗口 -->
+    <TextView android:id="@+id/stateText"
+        android:layout_width="52dp" android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:gravity="center"
+        android:text="学习中"
+        android:textColor="#FFFFFF" android:textSize="12sp"
+        android:maxLines="1" />
+
+    <!-- 连眨计数点 -->
+    <LinearLayout android:id="@+id/dots"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:orientation="horizontal" />
+</LinearLayout>

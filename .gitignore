@@ -1,0 +1,21 @@
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx/
+/app/src/main/assets/face_landmarker.task
+
+# release 签名密钥（勿外泄）
+keystore.properties
+*.jks
+*.keystore
+
+# 开发/测试遗留（截图、UI dump）
+*.png
+ui.xml
+ui2.xml

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="眨眼控制"
+            android:textColor="#E6EDF3"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="连眨 3 下 = 下一个视频，闭眼保持约 0.5 秒 = 上一个。全自动，无需校准。"
+            android:textColor="#8B949E"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:background="#143FB950"
+            android:text="🔒 摄像头画面仅在本机处理，不保存、不上传。"
+            android:textColor="#3FB950"
+            android:textSize="13sp" />
+
+        <!-- 权限清单：三项 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="① 摄像头权限"
+            android:textColor="#E6EDF3"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+        <TextView android:id="@+id/camStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#8B949E" android:textSize="13sp" android:text="未授权" />
+        <Button android:id="@+id/camBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="授权摄像头" />
+
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="② 悬浮窗权限"
+            android:textColor="#E6EDF3" android:textSize="16sp" android:textStyle="bold" />
+        <TextView android:id="@+id/overlayStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#8B949E" android:textSize="13sp" android:text="未授权" />
+        <Button android:id="@+id/overlayBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="开启悬浮窗权限" />
+
+        <TextView
+            android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="③ 无障碍（用于滑动翻页）"
+            android:textColor="#E6EDF3" android:textSize="16sp" android:textStyle="bold" />
+        <TextView android:id="@+id/a11yStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="#8B949E" android:textSize="13sp" android:text="未开启" />
+        <Button android:id="@+id/a11yBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="去开启无障碍" />
+
+        <!-- 仅在"已开但系统尚未绑上(多见于更新后)"时显示；系统会自动恢复，无需用户操作。 -->
+        <TextView android:id="@+id/a11yFixHint"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:padding="10dp"
+            android:background="#22D29922"
+            android:text="更新后无障碍偶尔需要重新连接，正在自动恢复，请稍候几秒…（无需任何操作）"
+            android:textColor="#D29922" android:textSize="13sp"
+            android:visibility="gone" />
+
+        <!-- 设置：连眨下数 -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:layout_marginTop="20dp" android:background="#30363D" />
+
+        <TextView android:id="@+id/nextLabel"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="下一个 = 连眨 3 下"
+            android:textColor="#E6EDF3" android:textSize="15sp" />
+        <SeekBar android:id="@+id/nextSeek"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:max="4" android:progress="1" />
+
+        <TextView android:id="@+id/holdLabel"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:text="上一个 = 闭眼保持 550 毫秒"
+            android:textColor="#E6EDF3" android:textSize="15sp" />
+        <!-- 400~1000ms,步进 50ms(progress*50+400);默认 550=progress 3 -->
+        <SeekBar android:id="@+id/holdSeek"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:max="12" android:progress="3" />
+
+        <TextView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="灵敏度"
+            android:textColor="#E6EDF3" android:textSize="15sp" />
+        <RadioGroup android:id="@+id/sensGroup"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <RadioButton android:id="@+id/sensAuto" android:layout_width="0dp"
+                android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="自动" android:textColor="#E6EDF3" android:checked="true" />
+            <RadioButton android:id="@+id/sensLow" android:layout_width="0dp"
+                android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="偏稳" android:textColor="#E6EDF3" />
+            <RadioButton android:id="@+id/sensHigh" android:layout_width="0dp"
+                android:layout_weight="1" android:layout_height="wrap_content"
+                android:text="偏灵敏" android:textColor="#E6EDF3" />
+        </RadioGroup>
+
+        <!-- 开始/停止 -->
+        <Button android:id="@+id/startBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="24dp" android:text="▶ 开始（缩到后台检测）"
+            android:textSize="16sp" />
+        <Button android:id="@+id/stopBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:enabled="false" android:text="■ 停止" />
+
+        <TextView android:id="@+id/hint"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="开始后，切到抖音/快手，连眨即可翻页。悬浮窗会显示实时状态。"
+            android:textColor="#8B949E" android:textSize="13sp" />
+
+    </LinearLayout>
+</ScrollView>
