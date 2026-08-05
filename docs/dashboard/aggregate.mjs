@@ -60,12 +60,19 @@ async function listDir(path) {
   }
 }
 
-/** 取文件原始内容(用 download_url 直取,省一次 base64 解码)。失败返回 null。 */
-async function getRaw(downloadUrl) {
+/**
+ * 取文件原始内容。走 Contents API 读 base64 `content` 字段。
+ * 【为何不用 download_url】私有库的 download_url 是 /raw/ 端点,带不带 token 都 403 读不到;
+ * 只有 Contents API 带 access_token 才能读私有库文件。失败返回 null。
+ */
+async function getFileContent(path) {
+  const url = `${API}/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?access_token=${TOKEN}`;
   try {
-    const r = await fetch(downloadUrl, { headers: { "User-Agent": "EyeControl-Aggregate" } });
+    const r = await fetch(url, { headers: { "User-Agent": "EyeControl-Aggregate" } });
     if (!r.ok) return null;
-    return await r.text();
+    const j = await r.json();
+    if (!j || !j.content) return null;
+    return Buffer.from(j.content, "base64").toString("utf-8");
   } catch {
     return null;
   }
@@ -108,7 +115,7 @@ async function main() {
   const models = {};
   for (const e of todayEntries) {
     if (e.type !== "file" || !e.name.endsWith(".ndjson")) continue;
-    const raw = e.download_url ? await getRaw(e.download_url) : null;
+    const raw = await getFileContent(`data/${today}/${e.name}`);
     if (!raw) continue;
     const line = raw.split("\n").find((s) => s.trim().length > 0);
     if (!line) continue;
