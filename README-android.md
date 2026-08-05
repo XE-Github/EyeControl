@@ -81,6 +81,58 @@
 
 - 全程**本地处理**：摄像头画面只喂给本机的 MediaPipe 模型算眨眼，**不保存、不上传**。
 - 唯一联网：首次下载模型文件（仅下载，不回传任何图像）。选择离线打包后可完全断网使用。
+- 另有一个**可选的匿名活跃统计**（v1.1 起），首次打开会征求同意，不同意完全不影响功能。详见下节「匿名活跃统计」。
+
+---
+
+## 七·五、匿名活跃统计（v1.1 起，可选）
+
+作者想知道**有多少人在用、常见机型/版本**，判断这东西对普通大众值不值得继续做——就这一个目的。整套设计围绕「诚实」和「隐私红线」两条原则展开。
+
+### 诚实原则（看板绝不造假）
+
+- 看板只展示**真实聚合数**：数据从设备直连上报到 Gitee 私库，GitHub Actions 每小时聚合成 `stats.json`，看板读这一个静态文件。拉不到就显式写「数据加载失败」，**永不填假数字**。
+- 口径写在脚注里、不藏着：`did` 随机匿名，卸载重装会变 → **活跃数偏高**；只统计**能连通 Gitee** 的设备 → 偏低；按**设备本地时区**计日、每小时刷新**非实时**。
+- 「每设备每天一个文件」= 目录文件数即当天 DAU，天然去重，不需要服务端逻辑，也没有可以做手脚的中间计数器。
+
+### 隐私红线（不可违反）
+
+- 摄像头画面**永远只在本机处理**，埋点**绝不上报任何图像 / 人脸 / 个人身份 / IP**。
+- 只上报四个匿名字段：随机安装标识 `did`（与真实身份无关）、App 版本 `ver`、机型 `model`、时间戳 `ts`。
+- **同意门**：未同意 = 零采集（连 `did` 都不生成、不上报）。同意后每台设备每天最多上报一次。见 `ConsentDialog.kt` / `Prefs.consent`。
+- 埋点是**旁路**：daemon 线程 fire-and-forget，全程 `try/catch` 静默吞，失败即丢，**绝不阻塞 / 拖累眨眼翻页主功能**。
+
+### 安全红线（令牌纪律）
+
+- **令牌绝不进源码 / git**：编译期从 `local.properties` 的 `analyticsToken` 注入 `BuildConfig.ANALYTICS_TOKEN`；`local.properties` 已 `.gitignore`。空令牌 = **灰度模式**（只写 logcat 不上报），填入即接通。
+- **小号隔离**：上报令牌属于**专用采集小号** `jaxinleon_1`，该小号下只有这一个统计私库。令牌一旦泄露，爆炸半径隔离在小号——**碰不到主账号** `jaxinleon` **的代码库，更碰不到签名 keystore**，且可随时作废重发。APK 内含令牌是已知取舍（只污染小号统计数据）。
+- CI 侧令牌（`GITEE_TOKEN` 只读采集小号、`GITEE_PUSH_TOKEN` 主账号回传 stats.json）只存 GitHub 仓库 **Secrets**，绝不写进代码 / 不落盘 / 不回显。
+
+### 数据链路（一图）
+
+```
+App（同意门通过）
+  └─ 每设备每天首次打开 → Gitee Contents API 创建文件
+       私库 jaxinleon_1/eyecontrol-analytics : data/YYYY-MM-DD/<did>.ndjson
+  ↓
+GitHub Actions（每小时 cron）
+  └─ aggregate.mjs 读 Gitee 私库（Contents API base64，私库 download_url 会 403）
+       → 聚合 DAU / WAU / 版本 / 机型 → docs/dashboard/stats.json
+       → 提交回 GitHub + 同步回 Gitee（备份）
+  ↓
+GitHub Pages 看板（docs/dashboard/index.html 读 stats.json）
+```
+
+> Gitee Pages 已对新站点停用（`has_page:false`、菜单入口消失、站点 404），故看板**统一在 GitHub Pages 展示**；Gitee 侧仅作数据源 + stats.json 备份。
+
+### 相关文件
+
+- `app/.../Analytics.kt` — 埋点上报（同意门 + 每日节流 + fire-and-forget）。
+- `app/.../ConsentDialog.kt` / `Prefs.kt` — 同意门 UI + did 生成 / 同意态 / 节流键。
+- `app/build.gradle.kts` — 令牌从 `local.properties` 注入 `BuildConfig`（灰度开关）。
+- `docs/dashboard/aggregate.mjs` — GitHub Actions 聚合脚本（读 Gitee 私库）。
+- `docs/dashboard/index.html` — 看板页（读 `stats.json`，加载失败显式提示不造假）。
+- `.github/workflows/aggregate-analytics.yml` — 每小时聚合 + 提交 + 同步 Gitee。
 
 ---
 
