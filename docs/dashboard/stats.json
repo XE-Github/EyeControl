@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-05T12:17:07.168Z",
+  "generatedAt": "2026-08-05T14:38:46.354Z",
   "tz": "device-local",
   "today": "2026-08-05",
-  "dau": 2,
-  "wau": 2,
+  "dau": 3,
+  "wau": 3,
   "dau30": [
     {
       "day": "2026-07-07",
@@ -123,14 +123,15 @@
     },
     {
       "day": "2026-08-05",
-      "count": 2
+      "count": 3
     }
   ],
   "versions": {
+    "1.2": 1,
     "1.1": 2
   },
   "models": {
-    "Xiaomi 25098PN5AC": 1,
+    "Xiaomi 25098PN5AC": 2,
     "Xiaomi 23127PN0CC": 1
   },
   "note": "did 随机匿名,卸载重装会变→活跃偏高;仅统计能连通 Gitee 的设备。"
