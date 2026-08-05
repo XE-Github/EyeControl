@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider 授权范围:externalCacheDir(更新 APK 下载在此)。
+     UpdateDownloader 把 EyeControl-update.apk 放这里,再以 content:// 授权给系统安装器。 -->
+<paths>
+    <external-cache-path name="update" path="." />
+</paths>

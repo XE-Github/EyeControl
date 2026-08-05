@@ -2,6 +2,8 @@ package com.eyecontrol.app
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AlertDialog
+import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -22,6 +24,9 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * 主界面:三项权限引导(摄像头/悬浮窗/无障碍)+ 设置(连眨下数、灵敏度)+ 开始/停止。
@@ -79,6 +84,10 @@ class MainActivity : AppCompatActivity() {
 
         setupSettings()
 
+        // 当前版本 + 手动检查更新
+        findViewById<TextView>(R.id.versionLabel).text = "当前版本 v${BuildConfig.VERSION_NAME}"
+        findViewById<Button>(R.id.updateBtn).setOnClickListener { checkUpdate(manual = true) }
+
         startBtn.setOnClickListener { startDetection() }
         stopBtn.setOnClickListener {
             startService(Intent(this, CameraService::class.java).setAction(CameraService.ACTION_STOP))
@@ -105,6 +114,92 @@ class MainActivity : AppCompatActivity() {
                 startDetection()
             }
         }
+
+        maybeAutoCheckUpdate()
+    }
+
+    /** 启动时静默检查:每天最多一次(记日期戳);仅发现新版才弹框,无新版/失败不打扰。 */
+    private fun maybeAutoCheckUpdate() {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        if (Prefs.lastUpdateCheckDay(this) == today) return   // 今天已查过
+        Prefs.setLastUpdateCheckDay(this, today)              // 无论结果都记,避免同日反复请求
+        checkUpdate(manual = false)
+    }
+
+    /**
+     * 检查更新。manual=true 为用户点按钮(全程给反馈:检查中/已最新/失败);
+     * manual=false 为启动静默检查(只在有新版时弹框,其余静默)。
+     * 回调在子线程,统一 post 回主线程再碰 UI。
+     */
+    private fun checkUpdate(manual: Boolean) {
+        val btn = findViewById<Button>(R.id.updateBtn)
+        if (manual) { btn.isEnabled = false; btn.text = "检查中…" }
+
+        UpdateChecker.checkNow { info ->
+            ui.post {
+                if (manual) { btn.isEnabled = true; btn.text = "检查更新" }
+                if (isFinishing || isDestroyed) return@post
+
+                if (info == null) {
+                    if (manual) Toast.makeText(this, "检查失败,请稍后再试", Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                if (!UpdateChecker.isNewer(info.tag, BuildConfig.VERSION_NAME)) {
+                    if (manual) Toast.makeText(this, "已是最新版本", Toast.LENGTH_SHORT).show()
+                    return@post
+                }
+                showUpdateDialog(info)
+            }
+        }
+    }
+
+    /** 发现新版:弹框展示版本+更新说明,用户选「去更新」则下载并安装。 */
+    private fun showUpdateDialog(info: UpdateChecker.UpdateInfo) {
+        val notes = if (info.notes.isBlank()) "" else "\n\n更新内容:\n${info.notes.take(500)}"
+        AlertDialog.Builder(this)
+            .setTitle("发现新版本 ${info.tag}")
+            .setMessage("当前版本 v${BuildConfig.VERSION_NAME},可更新到 ${info.tag}(来源:${info.source})。$notes")
+            .setPositiveButton("去更新") { _, _ -> downloadAndInstall(info) }
+            .setNegativeButton("以后再说", null)
+            .show()
+    }
+
+    /** 下载新版 APK(进度弹框)→ 完成后拉起系统安装界面。 */
+    private fun downloadAndInstall(info: UpdateChecker.UpdateInfo) {
+        val dlg = ProgressDialog(this).apply {
+            setTitle("正在下载更新")
+            setMessage("请稍候…")
+            setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
+            max = 100
+            setCancelable(false)
+            show()
+        }
+        UpdateDownloader.download(
+            this, info.downloadUrl,
+            onProgress = { pct -> ui.post {
+                if (pct < 0) dlg.isIndeterminate = true else dlg.progress = pct
+            } },
+            onDone = { file -> ui.post {
+                dlg.dismiss()
+                if (isFinishing || isDestroyed) return@post
+                try {
+                    UpdateDownloader.installApk(this, file)
+                } catch (e: Exception) {
+                    android.util.Log.w("MainActivity", "拉起安装失败: ${e.message}")
+                    Toast.makeText(this, "无法打开安装界面,请重试", Toast.LENGTH_LONG).show()
+                }
+            } },
+            onError = { msg -> ui.post {
+                dlg.dismiss()
+                if (isFinishing || isDestroyed) return@post
+                AlertDialog.Builder(this)
+                    .setTitle("下载失败")
+                    .setMessage("更新包下载失败($msg)。可稍后重试,或到项目页面手动下载。")
+                    .setPositiveButton("重试") { _, _ -> downloadAndInstall(info) }
+                    .setNegativeButton("取消", null)
+                    .show()
+            } },
+        )
     }
 
     private fun setupSettings() {

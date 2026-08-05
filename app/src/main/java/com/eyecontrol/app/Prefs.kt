@@ -18,6 +18,7 @@ object Prefs {
     private const val K_HOLD = "holdMs"
     private const val K_SENS = "sens"     // "auto" | "low" | "high"
     private const val K_SCHEMA = "schemaV"
+    private const val K_UPD_DAY = "lastUpdateCheckDay"   // 启动自动检查每天最多一次的日期戳
     private const val SCHEMA = 3
     const val HOLD_DEFAULT = 550L
     private const val HOLD_OLD_DEFAULT = 800L
@@ -29,6 +30,11 @@ object Prefs {
     fun setNextN(ctx: Context, v: Int) = sp(ctx).edit().putInt(K_NEXT, v).apply()
     fun setHoldMs(ctx: Context, v: Long) = sp(ctx).edit().putLong(K_HOLD, v).apply()
     fun setSens(ctx: Context, v: String) = sp(ctx).edit().putString(K_SENS, v).apply()
+
+    /** 启动自动检查更新的节流:上次检查日期(yyyy-MM-dd,本地时区),空串=从未检查。 */
+    fun lastUpdateCheckDay(ctx: Context): String = sp(ctx).getString(K_UPD_DAY, "") ?: ""
+    fun setLastUpdateCheckDay(ctx: Context, day: String) =
+        sp(ctx).edit().putString(K_UPD_DAY, day).apply()
 
     /**
      * 一次性迁移。

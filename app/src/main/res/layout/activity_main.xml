@@ -123,6 +123,18 @@
                 android:text="偏灵敏" android:textColor="#E6EDF3" />
         </RadioGroup>
 
+        <!-- 检查更新 -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:layout_marginTop="20dp" android:background="#30363D" />
+
+        <TextView android:id="@+id/versionLabel"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="当前版本 —"
+            android:textColor="#8B949E" android:textSize="13sp" />
+        <Button android:id="@+id/updateBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="检查更新" />
+
         <!-- 开始/停止 -->
         <Button android:id="@+id/startBtn"
             android:layout_width="match_parent" android:layout_height="wrap_content"

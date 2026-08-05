@@ -90,5 +90,22 @@
 - `CameraService.kt` — 前台服务：常开摄像头 + 悬浮窗 + 把命中转给无障碍。
 - `SwipeAccessibilityService.kt` — 无障碍 `dispatchGesture` 竖直滑动。
 - `OverlayView.kt` — 悬浮窗 UI。
-- `MainActivity.kt` — 三项权限引导 + 设置 + 开始/停止。
+- `MainActivity.kt` — 三项权限引导 + 设置 + 开始/停止 + 检查更新。
 - `ModelProvider.kt` — 模型文件首次下载/缓存。
+- `UpdateChecker.kt` — 应用内检查更新:并发请求 GitHub + Gitee 的 releases/latest,取先返回的成功结果;逐段数值比较版本。
+- `UpdateDownloader.kt` — 下载新版 APK 到 externalCacheDir + FileProvider 拉起系统安装。
+
+---
+
+## 发版约定（⚠️ 每次发新版必须遵守，否则应用内检查更新会失效）
+
+应用内「检查更新」靠比对 GitHub / Gitee 上 **latest release 的 tag** 与本地 `versionName`。发版时务必:
+
+1. **递增版本号** —— 改 `app/build.gradle.kts`:`versionName`(如 `1.0`→`1.1`)**和** `versionCode`(如 `1`→`2`),两者一起加。
+2. **用同一个 keystore 签名** —— 升级包必须与线上包同源签名，否则用户无法覆盖安装(签名信息见私有备份仓库 `EyeControl-keys`)。
+3. **两平台都发 Release**，且遵守命名:
+   - **tag = `v` + versionName**，如 `v1.1`、`v2.0`。逐次递增(检查更新按此解析版本)。
+   - **APK 附件名以 `.apk` 结尾**，建议 `EyeControl-v<版本>.apk`。App 只认 `.apk` 结尾的附件(Gitee 的 Release 会自动附带源码 zip，会被自动跳过)。
+4. 两平台内容保持一致(同一个 APK 传两边)。国内用户走 Gitee、海外走 GitHub，App 会并发取先返回的。
+
+只要 tag 规范、versionCode 递增、签名同源，老用户打开 App(或点「检查更新」)就能收到新版并一键更新。
