@@ -41,12 +41,38 @@
   .foot li { margin:4px 0; }
   .msg { color:var(--warn); padding:20px; text-align:center; }
   .gen { color:var(--muted); font-size:12px; margin-top:8px; }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:24px; }
+  .btn {
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    background:var(--panel); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 14px; font-size:13px; font-family:inherit;
+    transition:border-color .15s, opacity .15s; text-decoration:none;
+  }
+  .btn:hover { border-color:var(--accent); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .btn.primary { border-color:var(--accent); }
+  .btn.recalc { border-color:var(--up); }
+  .btn.recalc:hover { border-color:var(--up); background:#1c1530; }
+  .toolbar .hint { color:var(--muted); font-size:12px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spinning { display:inline-block; animation:spin .8s linear infinite; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>👁 眨眼控制 · 活跃数据看板</h1>
   <div class="sub">匿名统计 · 每台设备每天最多计一次 · 数据每日刷新(非实时)</div>
+
+  <div class="toolbar">
+    <button id="btnRefresh" class="btn primary" type="button">
+      <span id="refreshIcon">🔄</span> 刷新数据
+    </button>
+    <a id="btnRecalc" class="btn recalc" target="_blank" rel="noopener"
+       href="https://github.com/XE-Github/EyeControl/actions/workflows/aggregate-analytics.yml">
+      ⚡ 立即重算
+    </a>
+    <span class="hint">「刷新数据」重新拉取最新快照;「立即重算」跳到 GitHub 跑一次聚合(约 40 秒),完成后再点刷新。</span>
+  </div>
 
   <div id="content"><div class="msg">正在加载数据…</div></div>
 
@@ -112,16 +138,28 @@ function render(d){
   if(d.generatedAt) document.getElementById('gen').textContent = '数据生成于 '+new Date(d.generatedAt).toLocaleString('zh-CN');
 }
 
-fetch(STATS_URL, {cache:'no-store'})
-  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-  .then(d=>{
-    if(d && d.empty){ document.getElementById('content').innerHTML='<div class="msg">还没有数据(等待首次聚合)</div>'; return; }
-    render(d);
-  })
-  .catch(e=>{
-    // 绝不显示假数字:失败就明说加载失败。
-    document.getElementById('content').innerHTML='<div class="msg">数据加载失败('+esc(e.message)+')。请稍后刷新。</div>';
-  });
+// 拉取并渲染最新快照。isManual=true 时是用户点「刷新数据」触发,给按钮做禁用+转圈。
+// 加时间戳查询参数 + no-store 双保险绕开浏览器/CDN 缓存,确保拿到刚聚合的 stats.json。
+function load(isManual){
+  const btn = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  if(isManual){ btn.disabled = true; icon.className = 'spinning'; }
+  return fetch(STATS_URL + '?t=' + Date.now(), {cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(d=>{
+      if(d && d.empty){ document.getElementById('content').innerHTML='<div class="msg">还没有数据(等待首次聚合)</div>'; return; }
+      render(d);
+    })
+    .catch(e=>{
+      // 绝不显示假数字:失败就明说加载失败。
+      document.getElementById('content').innerHTML='<div class="msg">数据加载失败('+esc(e.message)+')。请稍后刷新。</div>';
+    })
+    .finally(()=>{ if(isManual){ btn.disabled = false; icon.className = ''; } });
+}
+
+document.getElementById('btnRefresh').addEventListener('click', ()=> load(true));
+load(false);   // 首次加载
+
 </script>
 </body>
 </html>
