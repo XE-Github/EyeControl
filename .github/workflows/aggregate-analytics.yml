@@ -32,10 +32,12 @@ jobs:
         run: |
           git config user.name "eyecontrol-bot"
           git config user.email "bot@users.noreplace"
-          if git diff --quiet docs/dashboard/stats.json; then
+          git add docs/dashboard/stats.json
+          # 先 add 再看暂存区差异:这样新增文件(首次生成)也能被检出。
+          # 旧写法 `git diff <file>` 对未跟踪文件永远判"无差异",会漏掉首次提交。
+          if git diff --cached --quiet docs/dashboard/stats.json; then
             echo "无变化,跳过提交"
           else
-            git add docs/dashboard/stats.json
             git commit -m "chore(stats): 更新活跃数据看板"
             git push
           fi
