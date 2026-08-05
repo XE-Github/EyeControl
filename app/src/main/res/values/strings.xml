@@ -3,4 +3,5 @@
     <string name="app_name">眨眼控制</string>
     <string name="accessibility_label">眨眼控制 · 滑动</string>
     <string name="accessibility_desc">开启后，眨眼控制可模拟上下滑动，帮你在短视频里翻页。仅在你点“开始”后生效，画面仅本机处理、不上传。</string>
+    <string name="privacy_analytics">本应用仅收集匿名活跃统计（随机编号、App 版本、手机型号、打开时间），绝不收集摄像头画面、人脸或任何个人身份信息；是否同意都不影响功能。</string>
 </resources>

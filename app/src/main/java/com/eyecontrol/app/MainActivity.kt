@@ -100,6 +100,12 @@ class MainActivity : AppCompatActivity() {
         ) {
             notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+
+        // 匿名统计同意门:首启弹一次;同意后记一次 app_open(每设备每天一次,内部节流)。
+        // 未同意=零采集;无论如何都不影响功能。埋点旁路,不阻塞主流程。
+        ConsentDialog.ensure(this) { granted ->
+            if (granted) Analytics.trackAppOpen(this)
+        }
     }
 
     override fun onResume() {
@@ -116,6 +122,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         maybeAutoCheckUpdate()
+
+        // 日活埋点:每次回到前台都尝试记一次 app_open(内部按"每设备每天一次"节流,
+        // 且未同意直接零采集)。放这里能覆盖"同意后隔天再打开"的日子,不只首启。
+        Analytics.trackAppOpen(this)
     }
 
     /** 启动时静默检查:每天最多一次(记日期戳);仅发现新版才弹框,无新版/失败不打扰。 */

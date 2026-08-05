@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>眨眼控制 · 活跃数据看板</title>
+<style>
+  :root {
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#2f81f7; --ok:#3fb950; --warn:#d29922; --up:#a371f7;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    line-height:1.6; padding:24px 16px 48px;
+  }
+  .wrap { max-width:960px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px; }
+  .card .label { color:var(--muted); font-size:13px; }
+  .card .num { font-size:32px; font-weight:700; margin-top:4px; }
+  .card .num.dau { color:var(--accent); }
+  .card .num.wau { color:var(--up); }
+  .card .num.tot { color:var(--ok); }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:20px; }
+  .panel h2 { font-size:15px; margin:0 0 14px; color:var(--text); font-weight:600; }
+  svg { width:100%; height:180px; display:block; }
+  .axis { stroke:var(--border); stroke-width:1; }
+  .line { fill:none; stroke:var(--accent); stroke-width:2; }
+  .dot { fill:var(--accent); }
+  .gridtxt { fill:var(--muted); font-size:10px; }
+  .bar-row { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px; }
+  .bar-name { width:110px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { flex:1; background:var(--bg); border-radius:6px; overflow:hidden; height:18px; border:1px solid var(--border); }
+  .bar-fill { height:100%; background:var(--up); }
+  .bar-val { width:44px; text-align:right; color:var(--muted); }
+  .foot { color:var(--muted); font-size:12px; margin-top:24px; border-top:1px solid var(--border); padding-top:16px; }
+  .foot li { margin:4px 0; }
+  .msg { color:var(--warn); padding:20px; text-align:center; }
+  .gen { color:var(--muted); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👁 眨眼控制 · 活跃数据看板</h1>
+  <div class="sub">匿名统计 · 每台设备每天最多计一次 · 数据每日刷新(非实时)</div>
+
+  <div id="content"><div class="msg">正在加载数据…</div></div>
+
+  <ul class="foot" id="foot" style="display:none">
+    <li>📊 <b>口径</b>:日活(DAU)= 当天有多少台设备打开过;周活(WAU)= 最近 7 天去重设备数。</li>
+    <li>🔀 匿名随机编号:卸载重装 / 清数据后会变成新设备 → 实际活跃可能被<b>高估</b>,这是粗略估算而非精确人数。</li>
+    <li>🌐 只统计能连通上报服务器的设备;连不上的设备会静默丢弃 → 绝对值可能<b>偏低</b>。</li>
+    <li>🔒 只收集匿名编号 / App 版本 / 机型 / 打开时间;<b>绝不</b>收集任何摄像头画面、人脸或个人身份信息。</li>
+    <li>🕗 计日按<b>设备本地时区</b>;看板由定时任务聚合,<b>非实时</b>。</li>
+  </ul>
+  <div class="gen" id="gen"></div>
+</div>
+
+<script>
+// 部署后填入公开看板仓库里 stats.json 的地址(与本页同目录时用相对路径即可)。
+const STATS_URL = "stats.json";
+
+function esc(s){ return String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function renderSpark(dau30){
+  const W=900, H=180, pad=24;
+  if(!dau30 || !dau30.length) return '<div class="msg">暂无趋势数据</div>';
+  const xs = dau30.map((_,i)=> pad + i*(W-2*pad)/Math.max(1,dau30.length-1));
+  const max = Math.max(1, ...dau30.map(d=>d.count));
+  const ys = dau30.map(d=> H-pad - (d.count/max)*(H-2*pad));
+  const pts = xs.map((x,i)=> x.toFixed(1)+','+ys[i].toFixed(1)).join(' ');
+  const dots = xs.map((x,i)=>`<circle class="dot" cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="2.5"/>`).join('');
+  // 只标首/中/末三个日期,避免拥挤
+  const idxs=[0, Math.floor(dau30.length/2), dau30.length-1];
+  const labels=idxs.map(i=>`<text class="gridtxt" x="${xs[i].toFixed(1)}" y="${H-6}" text-anchor="middle">${dau30[i].day.slice(5)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <line class="axis" x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}"/>
+    <text class="gridtxt" x="${pad}" y="${pad-6}">峰值 ${max}</text>
+    <polyline class="line" points="${pts}"/>${dots}${labels}
+  </svg>`;
+}
+
+function renderBars(obj, cls){
+  const entries = Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return '<div class="msg" style="color:var(--muted)">今日暂无数据</div>';
+  const max = Math.max(...entries.map(e=>e[1]));
+  return entries.map(([name,val])=>`
+    <div class="bar-row">
+      <div class="bar-name" title="${esc(name)}">${esc(name)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(0)}%"></div></div>
+      <div class="bar-val">${val}</div>
+    </div>`).join('');
+}
+
+function render(d){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="cards">
+      <div class="card"><div class="label">今日活跃 DAU</div><div class="num dau">${d.dau ?? '—'}</div></div>
+      <div class="card"><div class="label">近7天活跃 WAU</div><div class="num wau">${d.wau ?? '—'}</div></div>
+      <div class="card"><div class="label">今日机型数</div><div class="num tot">${Object.keys(d.models||{}).length}</div></div>
+    </div>
+    <div class="panel"><h2>近 30 天日活趋势</h2>${renderSpark(d.dau30)}</div>
+    <div class="panel"><h2>今日版本分布</h2>${renderBars(d.versions)}</div>
+    <div class="panel"><h2>今日机型分布</h2>${renderBars(d.models)}</div>
+  `;
+  document.getElementById('foot').style.display='';
+  if(d.generatedAt) document.getElementById('gen').textContent = '数据生成于 '+new Date(d.generatedAt).toLocaleString('zh-CN');
+}
+
+fetch(STATS_URL, {cache:'no-store'})
+  .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+  .then(d=>{
+    if(d && d.empty){ document.getElementById('content').innerHTML='<div class="msg">还没有数据(等待首次聚合)</div>'; return; }
+    render(d);
+  })
+  .catch(e=>{
+    // 绝不显示假数字:失败就明说加载失败。
+    document.getElementById('content').innerHTML='<div class="msg">数据加载失败('+esc(e.message)+')。请稍后刷新。</div>';
+  });
+</script>
+</body>
+</html>

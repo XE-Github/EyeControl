@@ -12,6 +12,15 @@ val keystoreProps = Properties().apply {
     if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
 }
 
+// 匿名统计上报令牌:从 local.properties 的 analyticsToken 读(该文件已 gitignore,不进版本库)。
+// 缺失=空串 → App 灰度模式(只写 logcat 不上报)。令牌属专用采集小号、仅统计私库写权限,
+// 泄露爆炸半径隔离在小号,绝不进源码/git。
+val localPropsFile = rootProject.file("local.properties")
+val localProps = Properties().apply {
+    if (localPropsFile.exists()) localPropsFile.inputStream().use { load(it) }
+}
+val analyticsToken: String = (localProps.getProperty("analyticsToken") ?: "").trim()
+
 android {
     namespace = "com.eyecontrol.app"
     compileSdk = 34
@@ -20,8 +29,11 @@ android {
         applicationId = "com.eyecontrol.app"
         minSdk = 26              // dispatchGesture 需 API24+；26 覆盖绝大多数在用机型且省心
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+
+        // 令牌注入 BuildConfig.ANALYTICS_TOKEN(空串=灰度不上报)。
+        buildConfigField("String", "ANALYTICS_TOKEN", "\"$analyticsToken\"")
     }
 
     signingConfigs {

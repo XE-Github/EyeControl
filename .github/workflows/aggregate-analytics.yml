@@ -1,0 +1,41 @@
+name: aggregate-analytics
+
+# 定时聚合匿名活跃数据 → 更新看板 stats.json。
+# GITEE_TOKEN(采集小号令牌,只读私有统计库)存在仓库 Secrets,绝不写进代码。
+on:
+  schedule:
+    - cron: "17 * * * *"      # 每小时第 17 分(避开整点洪峰)
+  workflow_dispatch: {}        # 支持手动触发
+
+permissions:
+  contents: write              # 允许把 stats.json 提交回本仓库
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 聚合
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          STAT_OWNER: ${{ vars.STAT_OWNER }}      # 采集小号用户名;不配则脚本默认 jaxinleon_1
+          STAT_REPO: ${{ vars.STAT_REPO }}        # 统计私库名;不配则脚本默认 eyecontrol-analytics
+          OUT_PATH: docs/dashboard/stats.json
+        run: node docs/dashboard/aggregate.mjs
+
+      - name: 提交 stats.json(仅在有变化时)
+        run: |
+          git config user.name "eyecontrol-bot"
+          git config user.email "bot@users.noreplace"
+          if git diff --quiet docs/dashboard/stats.json; then
+            echo "无变化,跳过提交"
+          else
+            git add docs/dashboard/stats.json
+            git commit -m "chore(stats): 更新活跃数据看板"
+            git push
+          fi
