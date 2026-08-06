@@ -2,7 +2,6 @@ package com.eyecontrol.app
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
@@ -24,6 +23,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,6 +40,25 @@ class MainActivity : AppCompatActivity() {
     private lateinit var a11yFixHint: TextView
     private lateinit var startBtn: Button
     private lateinit var stopBtn: Button
+    private lateinit var hint: TextView
+    // 权限卡折叠:全就绪→只显 permHeader(一行「一切就绪」),否则→显 permDetail(三项明细)。
+    // 纯 UI 显隐,依据 refresh() 里既有的 hasCamera()/hasOverlay()/a11yState() 结果,不新增判定。
+    private lateinit var permHeader: View
+    private lateinit var permDetail: View
+    private var permExpanded = false   // 用户手动点开折叠卡后置 true,本次可见期内保持展开
+
+    // 乐观运行态:用户刚点开始(=true)/停止(=false)、但 service 异步起停尚未回信时的"期望态"。
+    // service 起停都是异步的,单看 CameraService.running 快照会滞后 → 按钮不跟手。这里先按用户意图
+    // 立刻切按钮,等 ACTION_STATE 广播回来、真实态与期望一致时清空(交回真相接管)。null=无待定意图。
+    private var pendingRunning: Boolean? = null
+
+    // 监听 CameraService 的运行态广播,收到即 refresh():这是"按钮态最终与真实态一致"的权威校正。
+    private val stateReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
+            if (intent?.action == CameraService.ACTION_STATE) refresh()
+        }
+    }
+    private var stateRegistered = false
 
     // 无障碍三态:未开启 / 恢复中(已开但系统尚未重绑,常见于重装后) / 就绪
     private enum class A11yState { NOT_ENABLED, RECONNECTING, READY }
@@ -97,6 +116,14 @@ class MainActivity : AppCompatActivity() {
         a11yFixHint = findViewById(R.id.a11yFixHint)
         startBtn = findViewById(R.id.startBtn)
         stopBtn = findViewById(R.id.stopBtn)
+        hint = findViewById(R.id.hint)
+        permHeader = findViewById(R.id.permHeader)
+        permDetail = findViewById(R.id.permDetail)
+        // 点折叠的「一切就绪」行 → 展开三项明细(本次可见期保持,下次回前台若仍全就绪再收起)
+        permHeader.setOnClickListener {
+            permExpanded = true
+            refresh()
+        }
 
         findViewById<Button>(R.id.camBtn).setOnClickListener {
             camPermLauncher.launch(Manifest.permission.CAMERA)
@@ -110,19 +137,22 @@ class MainActivity : AppCompatActivity() {
             )
         }
         findViewById<Button>(R.id.a11yBtn).setOnClickListener {
-            Toast.makeText(this, "在列表里找到「眨眼控制·滑动」并开启", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "在列表里找到「眨眼控制 · 滑动」并开启", Toast.LENGTH_LONG).show()
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
         setupSettings()
 
         // 当前版本 + 手动检查更新
-        findViewById<TextView>(R.id.versionLabel).text = "当前版本 v${BuildConfig.VERSION_NAME}"
+        findViewById<TextView>(R.id.versionLabel).text =
+            "${getString(R.string.version_prefix)}${BuildConfig.VERSION_NAME}"
         findViewById<Button>(R.id.updateBtn).setOnClickListener { checkUpdate(manual = true) }
         findViewById<Button>(R.id.feedbackBtn).setOnClickListener { FeedbackDialog.show(this) }
 
         startBtn.setOnClickListener { startDetection() }
         stopBtn.setOnClickListener {
+            // 乐观置停:立刻按用户意图切按钮(禁停止、复位开始),不等 onDestroy 回信——它是异步的。
+            pendingRunning = false
             startService(Intent(this, CameraService::class.java).setAction(CameraService.ACTION_STOP))
             refresh()
         }
@@ -142,7 +172,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onResume() {
-        super.onResume(); refresh()
+        super.onResume()
+        registerStateReceiver()   // 先注册再 refresh:可见期内漏不掉任何一次运行态变化广播
+        refresh()
         // 【仅 debug】全自主测试入口:adb 用 `am start ... --ez autostart true` 拉起本界面时,
         // 由 Activity 前台化解冻进程 + 自动点"开始"起前台服务(shell 起不了 exported=false 的服务,
         // 且冷进程收不到广播——见 Greezer)。服务起来钉住进程后,DEBUG_BLINK 注入广播才能送达。
@@ -203,7 +235,7 @@ class MainActivity : AppCompatActivity() {
     /** 发现新版:弹框展示版本+更新说明,用户选「去更新」则下载并安装。 */
     private fun showUpdateDialog(info: UpdateChecker.UpdateInfo) {
         val notes = if (info.notes.isBlank()) "" else "\n\n更新内容:\n${info.notes.take(500)}"
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("发现新版本 ${info.tag}")
             .setMessage("当前版本 v${BuildConfig.VERSION_NAME},可更新到 ${info.tag}(来源:${info.source})。$notes")
             .setPositiveButton("去更新") { _, _ -> downloadAndInstall(info) }
@@ -239,7 +271,7 @@ class MainActivity : AppCompatActivity() {
             onError = { msg -> ui.post {
                 dlg.dismiss()
                 if (isFinishing || isDestroyed) return@post
-                AlertDialog.Builder(this)
+                MaterialAlertDialogBuilder(this)
                     .setTitle("下载失败")
                     .setMessage("更新包下载失败($msg)。可稍后重试,或到项目页面手动下载。")
                     .setPositiveButton("重试") { _, _ -> downloadAndInstall(info) }
@@ -295,7 +327,7 @@ class MainActivity : AppCompatActivity() {
         if (!hasOverlay()) { Toast.makeText(this, "请先开启悬浮窗权限", Toast.LENGTH_SHORT).show(); return }
         when (a11yState()) {
             A11yState.NOT_ENABLED -> { Toast.makeText(this, "请先开启无障碍", Toast.LENGTH_SHORT).show(); return }
-            A11yState.RECONNECTING -> { Toast.makeText(this, "无障碍正在自动恢复，请稍候…", Toast.LENGTH_SHORT).show(); return }
+            A11yState.RECONNECTING -> { Toast.makeText(this, "无障碍正在自动恢复,请稍候…", Toast.LENGTH_SHORT).show(); return }
             A11yState.READY -> { /* 放行 */ }
         }
 
@@ -304,7 +336,9 @@ class MainActivity : AppCompatActivity() {
         else startService(intent)
         // 不再 moveTaskToBack:那会让系统判定"后台用相机"而掐断摄像头(尤其澎湃OS/MIUI)。
         // 悬浮窗里那块相机预览会保住"App 可见",用户手动切到抖音即可,相机不掉。
-        Toast.makeText(this, "已开始！悬浮窗出现后，手动切到抖音/快手连眨即可", Toast.LENGTH_LONG).show()
+        // 乐观置起:立刻按用户意图切按钮(禁开始、启用停止),不等 onStartCommand 回信——它是异步的。
+        pendingRunning = true
+        Toast.makeText(this, "已开始!切到抖音 / 快手,连眨即可翻页", Toast.LENGTH_LONG).show()
         refresh()
     }
 
@@ -330,11 +364,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refresh() {
-        val ok = "✅ 已就绪"; val no = "⛔ 未开启"
-        val green = 0xFF3FB950.toInt(); val gray = 0xFF8B949E.toInt(); val amber = 0xFFD29922.toInt()
+        val ok = getString(R.string.status_ready)          // ✅ 已就绪
+        val no = getString(R.string.status_not_enabled)    // ⛔ 未开启
+        val green = ContextCompat.getColor(this, R.color.success)
+        val gray = ContextCompat.getColor(this, R.color.textSecondary)
+        val amber = ContextCompat.getColor(this, R.color.warn)
 
         camStatus.text = if (hasCamera()) ok else no
+        camStatus.setTextColor(if (hasCamera()) green else gray)
         overlayStatus.text = if (hasOverlay()) ok else no
+        overlayStatus.setTextColor(if (hasOverlay()) green else gray)
 
         val a11y = a11yState()
         when (a11y) {
@@ -351,16 +390,36 @@ class MainActivity : AppCompatActivity() {
             A11yState.RECONNECTING -> {
                 // 已开但系统尚未绑上(多见于重装/更新后)。打开本 App 会触发系统在数秒内自动重绑,
                 // 这里静默轮询、绑上就转 ✅,不打扰用户、不需要任何手动操作。
-                a11yStatus.text = "🔄 正在自动恢复…"; a11yStatus.setTextColor(amber)
+                a11yStatus.text = getString(R.string.status_reconnecting)
+                a11yStatus.setTextColor(amber)
                 a11yFixHint.visibility = View.VISIBLE
                 startRecoverPoll()
             }
         }
 
         val allReady = hasCamera() && hasOverlay() && a11y == A11yState.READY
-        startBtn.isEnabled = allReady && !CameraService.running
-        stopBtn.isEnabled = CameraService.running
-        startBtn.text = if (allReady) "▶ 开始（缩到后台检测）" else "▶ 开始（先完成上面三项授权）"
+
+        // 权限卡折叠:全就绪且用户未手动展开 → 折叠成一行「一切就绪」;否则展开三项明细。
+        // 未全就绪时强制展开(得让用户看到缺哪项),并复位手动展开标记。
+        if (!allReady) permExpanded = false
+        val collapsed = allReady && !permExpanded
+        permHeader.visibility = if (collapsed) View.VISIBLE else View.GONE
+        permDetail.visibility = if (collapsed) View.GONE else View.VISIBLE
+
+        // 真实态一旦追上用户意图,乐观标记就功成身退,交回真相接管(避免真相变化后被旧意图钉死)。
+        if (pendingRunning == CameraService.running) pendingRunning = null
+
+        // 生效运行态:有待定意图先认意图(按钮跟手),否则认服务真实态。effectiveRunning 为准切按钮/提示。
+        val effectiveRunning = pendingRunning ?: CameraService.running
+
+        // 底部主操作 + 动态提示(语义与旧版一致:未就绪禁用、运行中显停止态)。
+        startBtn.isEnabled = allReady && !effectiveRunning
+        stopBtn.isEnabled = effectiveRunning
+        hint.text = when {
+            !allReady -> getString(R.string.hint_need_grant)
+            effectiveRunning -> getString(R.string.hint_running)
+            else -> getString(R.string.hint_ready)
+        }
     }
 
     /**
@@ -389,6 +448,31 @@ class MainActivity : AppCompatActivity() {
         recoverPoll = null
     }
 
-    override fun onPause() { super.onPause(); stopRecoverPoll() }
+    override fun onPause() {
+        super.onPause(); stopRecoverPoll()
+        unregisterStateReceiver()
+        permExpanded = false   // 离开界面后复位:下次回来若仍全就绪,权限卡重新收起为一行
+    }
     override fun onDestroy() { super.onDestroy(); stopRecoverPoll() }
+
+    /** 注册运行态广播接收器(内部广播、不导出,与 CameraService 的 swipeStatReceiver 同模式)。失败静默。 */
+    private fun registerStateReceiver() {
+        if (stateRegistered) return
+        try {
+            val filter = android.content.IntentFilter(CameraService.ACTION_STATE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(stateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(stateReceiver, filter)
+            }
+            stateRegistered = true
+        } catch (_: Exception) {}
+    }
+
+    private fun unregisterStateReceiver() {
+        if (!stateRegistered) return
+        try { unregisterReceiver(stateReceiver) } catch (_: Exception) {}
+        stateRegistered = false
+    }
 }

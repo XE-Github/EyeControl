@@ -1,159 +1,333 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  主界面:顶部标题 + 三张分组卡片(准备 / 翻页设置 / 关于)在可滚动区,
+  主操作「开始 / 停止」固定在底部栏(不随内容滚动,永远一键可达)。
+  视觉走 GitHub-dark:卡片用 @color/surface 面 + @color/divider 描边分层(不用阴影)。
+  ⚠ 所有 android:id 与旧版保持一致,MainActivity 靠 findViewById 绑定;
+     新增的仅 permHeader / permHeaderStatus / permDetail(权限卡折叠用)。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0D1117"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="@color/bg">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="@dimen/space_20">
+
+            <!-- ── 顶部:标题 + 一句话玩法 + 隐私 ── -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textAppearance="@style/TextAppearance.EyeControl.Title" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_4"
+                android:text="@string/main_tagline"
+                android:textAppearance="@style/TextAppearance.EyeControl.Body" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_12"
+                android:padding="@dimen/space_12"
+                android:background="@color/privacyBannerBg"
+                android:text="@string/privacy_local"
+                android:textColor="@color/success"
+                android:textSize="@dimen/text_caption" />
+
+            <!-- ══ 卡片一 · 准备(权限)══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_20"
+                app:cardBackgroundColor="@color/surface"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="@dimen/card_stroke"
+                app:cardCornerRadius="@dimen/card_corner">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/card_prepare"
+                        android:accessibilityHeading="true"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Headline" />
+
+                    <!-- 折叠态:三项全就绪时显示一行「一切就绪」,点按可展开明细 -->
+                    <LinearLayout
+                        android:id="@+id/permHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="@dimen/space_12"
+                        android:minHeight="@dimen/touch_min"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/permHeaderStatus"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/perm_all_ready"
+                            android:textColor="@color/success"
+                            android:textSize="@dimen/text_label" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:text="@string/perm_expand_hint"
+                            android:textAppearance="@style/TextAppearance.EyeControl.Caption" />
+                    </LinearLayout>
+
+                    <!-- 展开态:三项明细(未全就绪时显示;点折叠行也可切回展开) -->
+                    <LinearLayout
+                        android:id="@+id/permDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- ① 摄像头 -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_16"
+                            android:text="@string/perm_camera"
+                            android:textAppearance="@style/TextAppearance.EyeControl.Label"
+                            android:textStyle="bold" />
+                        <TextView android:id="@+id/camStatus"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:text="@string/status_not_enabled"
+                            android:textColor="@color/textSecondary" android:textSize="@dimen/text_body" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/camBtn"
+                            style="@style/Btn.Tonal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:text="@string/btn_grant_camera" />
+
+                        <!-- ② 悬浮窗 -->
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_16"
+                            android:text="@string/perm_overlay"
+                            android:textAppearance="@style/TextAppearance.EyeControl.Label"
+                            android:textStyle="bold" />
+                        <TextView android:id="@+id/overlayStatus"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:text="@string/status_not_enabled"
+                            android:textColor="@color/textSecondary" android:textSize="@dimen/text_body" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/overlayBtn"
+                            style="@style/Btn.Tonal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:text="@string/btn_grant_overlay" />
+
+                        <!-- ③ 无障碍 -->
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_16"
+                            android:text="@string/perm_a11y"
+                            android:textAppearance="@style/TextAppearance.EyeControl.Label"
+                            android:textStyle="bold" />
+                        <TextView android:id="@+id/a11yStatus"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_4"
+                            android:text="@string/status_not_enabled"
+                            android:textColor="@color/textSecondary" android:textSize="@dimen/text_body" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/a11yBtn"
+                            style="@style/Btn.Tonal"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_8"
+                            android:text="@string/btn_grant_a11y" />
+
+                        <!-- 仅在"已开但系统尚未绑上(多见于更新后)"时显示,系统会自动恢复 -->
+                        <TextView android:id="@+id/a11yFixHint"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/space_12" android:padding="@dimen/space_12"
+                            android:background="@color/warnBannerBg"
+                            android:text="@string/a11y_recover_hint"
+                            android:textColor="@color/warn" android:textSize="@dimen/text_caption"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══ 卡片二 · 翻页设置 ══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                app:cardBackgroundColor="@color/surface"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="@dimen/card_stroke"
+                app:cardCornerRadius="@dimen/card_corner">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/card_settings"
+                        android:accessibilityHeading="true"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Headline" />
+
+                    <TextView android:id="@+id/nextLabel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16" android:text="下一个 = 连眨 3 下"
+                        android:labelFor="@+id/nextSeek"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Label" />
+                    <SeekBar android:id="@+id/nextSeek"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:max="4" android:progress="1" />
+
+                    <TextView android:id="@+id/holdLabel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16" android:text="上一个 = 闭眼保持 550 毫秒"
+                        android:labelFor="@+id/holdSeek"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Label" />
+                    <!-- 400~1000ms,步进 50ms(progress*50+400);默认 550=progress 3 -->
+                    <SeekBar android:id="@+id/holdSeek"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:max="12" android:progress="3" />
+
+                    <TextView
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_16" android:text="灵敏度"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Label" />
+                    <RadioGroup android:id="@+id/sensGroup"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:orientation="horizontal">
+                        <RadioButton android:id="@+id/sensAuto" android:layout_width="0dp"
+                            android:layout_weight="1" android:layout_height="wrap_content"
+                            android:text="自动" android:textColor="@color/textPrimary" android:checked="true" />
+                        <RadioButton android:id="@+id/sensLow" android:layout_width="0dp"
+                            android:layout_weight="1" android:layout_height="wrap_content"
+                            android:text="偏稳" android:textColor="@color/textPrimary" />
+                        <RadioButton android:id="@+id/sensHigh" android:layout_width="0dp"
+                            android:layout_weight="1" android:layout_height="wrap_content"
+                            android:text="偏灵敏" android:textColor="@color/textPrimary" />
+                    </RadioGroup>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ══ 卡片三 · 关于 ══ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_16"
+                app:cardBackgroundColor="@color/surface"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/divider"
+                app:strokeWidth="@dimen/card_stroke"
+                app:cardCornerRadius="@dimen/card_corner">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/space_16">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/card_about"
+                        android:accessibilityHeading="true"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Headline" />
+
+                    <TextView android:id="@+id/versionLabel"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_12" android:text="当前版本 —"
+                        android:textAppearance="@style/TextAppearance.EyeControl.Caption" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/updateBtn"
+                        style="@style/Btn.Tonal"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_8"
+                        android:text="@string/btn_check_update" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/feedbackBtn"
+                        style="@style/Btn.Text"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/space_4"
+                        android:text="@string/btn_feedback" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- ── 底部固定操作栏:主 CTA + 动态提示(不随上方滚动)── -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/card_stroke"
+        android:background="@color/divider"
+        android:importantForAccessibility="no" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:background="@color/bg"
+        android:paddingStart="@dimen/space_20"
+        android:paddingEnd="@dimen/space_20"
+        android:paddingTop="@dimen/space_12"
+        android:paddingBottom="@dimen/space_16">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="眨眼控制"
-            android:textColor="#E6EDF3"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/startBtn"
+            style="@style/Btn.Primary"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/btn_start" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="连眨 3 下 = 下一个视频，闭眼保持约 0.5 秒 = 上一个。全自动，无需校准。"
-            android:textColor="#8B949E"
-            android:textSize="14sp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:padding="10dp"
-            android:background="#143FB950"
-            android:text="🔒 摄像头画面仅在本机处理，不保存、不上传。"
-            android:textColor="#3FB950"
-            android:textSize="13sp" />
-
-        <!-- 权限清单：三项 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="① 摄像头权限"
-            android:textColor="#E6EDF3"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-        <TextView android:id="@+id/camStatus"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/stopBtn"
+            style="@style/Btn.Stop"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="#8B949E" android:textSize="13sp" android:text="未授权" />
-        <Button android:id="@+id/camBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:text="授权摄像头" />
-
-        <TextView
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="② 悬浮窗权限"
-            android:textColor="#E6EDF3" android:textSize="16sp" android:textStyle="bold" />
-        <TextView android:id="@+id/overlayStatus"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="#8B949E" android:textSize="13sp" android:text="未授权" />
-        <Button android:id="@+id/overlayBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:text="开启悬浮窗权限" />
-
-        <TextView
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="③ 无障碍（用于滑动翻页）"
-            android:textColor="#E6EDF3" android:textSize="16sp" android:textStyle="bold" />
-        <TextView android:id="@+id/a11yStatus"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textColor="#8B949E" android:textSize="13sp" android:text="未开启" />
-        <Button android:id="@+id/a11yBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:text="去开启无障碍" />
-
-        <!-- 仅在"已开但系统尚未绑上(多见于更新后)"时显示；系统会自动恢复，无需用户操作。 -->
-        <TextView android:id="@+id/a11yFixHint"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:padding="10dp"
-            android:background="#22D29922"
-            android:text="更新后无障碍偶尔需要重新连接，正在自动恢复，请稍候几秒…（无需任何操作）"
-            android:textColor="#D29922" android:textSize="13sp"
-            android:visibility="gone" />
-
-        <!-- 设置：连眨下数 -->
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:layout_marginTop="20dp" android:background="#30363D" />
-
-        <TextView android:id="@+id/nextLabel"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="下一个 = 连眨 3 下"
-            android:textColor="#E6EDF3" android:textSize="15sp" />
-        <SeekBar android:id="@+id/nextSeek"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:max="4" android:progress="1" />
-
-        <TextView android:id="@+id/holdLabel"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="10dp" android:text="上一个 = 闭眼保持 550 毫秒"
-            android:textColor="#E6EDF3" android:textSize="15sp" />
-        <!-- 400~1000ms,步进 50ms(progress*50+400);默认 550=progress 3 -->
-        <SeekBar android:id="@+id/holdSeek"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:max="12" android:progress="3" />
-
-        <TextView
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="灵敏度"
-            android:textColor="#E6EDF3" android:textSize="15sp" />
-        <RadioGroup android:id="@+id/sensGroup"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:orientation="horizontal">
-            <RadioButton android:id="@+id/sensAuto" android:layout_width="0dp"
-                android:layout_weight="1" android:layout_height="wrap_content"
-                android:text="自动" android:textColor="#E6EDF3" android:checked="true" />
-            <RadioButton android:id="@+id/sensLow" android:layout_width="0dp"
-                android:layout_weight="1" android:layout_height="wrap_content"
-                android:text="偏稳" android:textColor="#E6EDF3" />
-            <RadioButton android:id="@+id/sensHigh" android:layout_width="0dp"
-                android:layout_weight="1" android:layout_height="wrap_content"
-                android:text="偏灵敏" android:textColor="#E6EDF3" />
-        </RadioGroup>
-
-        <!-- 检查更新 -->
-        <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:layout_marginTop="20dp" android:background="#30363D" />
-
-        <TextView android:id="@+id/versionLabel"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:text="当前版本 —"
-            android:textColor="#8B949E" android:textSize="13sp" />
-        <Button android:id="@+id/updateBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:text="检查更新" />
-
-        <!-- 反馈 / 报告问题：本地不丢队列 + 有网自动补发,离线也能发,绝不失败 -->
-        <Button android:id="@+id/feedbackBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="6dp" android:text="✍ 反馈 / 报告问题" />
-
-        <!-- 开始/停止 -->
-        <Button android:id="@+id/startBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="24dp" android:text="▶ 开始（缩到后台检测）"
-            android:textSize="16sp" />
-        <Button android:id="@+id/stopBtn"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:enabled="false" android:text="■ 停止" />
+            android:layout_marginTop="@dimen/space_8"
+            android:enabled="false" android:text="@string/btn_stop" />
 
         <TextView android:id="@+id/hint"
             android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="开始后，切到抖音/快手，连眨即可翻页。悬浮窗会显示实时状态。"
-            android:textColor="#8B949E" android:textSize="13sp" />
-
+            android:layout_marginTop="@dimen/space_12"
+            android:text="@string/hint_ready"
+            android:textAppearance="@style/TextAppearance.EyeControl.Caption" />
     </LinearLayout>
-</ScrollView>
+</LinearLayout>

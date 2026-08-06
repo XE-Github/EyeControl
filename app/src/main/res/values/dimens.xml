@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  EyeControl 间距阶 + 字阶 —— 与 colors.xml 一样是设计系统单一事实源。
+  过去字号在布局里是 13/14/15/16/24 一把散值;现收敛成有层级的字阶,
+  配合 themes.xml 里的 TextAppearance.EyeControl.* 使用,整屏字重字号统一。
+-->
+<resources>
+    <!-- 间距阶(8 的倍数为主,4 作微调) -->
+    <dimen name="space_4">4dp</dimen>
+    <dimen name="space_8">8dp</dimen>
+    <dimen name="space_12">12dp</dimen>
+    <dimen name="space_16">16dp</dimen>
+    <dimen name="space_20">20dp</dimen>
+    <dimen name="space_24">24dp</dimen>
+
+    <!-- 字阶 -->
+    <dimen name="text_caption">12sp</dimen>    <!-- 说明 / 版本 / 次要提示 -->
+    <dimen name="text_body">14sp</dimen>       <!-- 正文 / 状态 -->
+    <dimen name="text_label">15sp</dimen>      <!-- 设置项标签 -->
+    <dimen name="text_headline">16sp</dimen>   <!-- 卡片标题 -->
+    <dimen name="text_title">22sp</dimen>      <!-- 页面主标题 -->
+
+    <!-- 形状与触达 -->
+    <dimen name="card_corner">12dp</dimen>
+    <dimen name="card_stroke">1dp</dimen>
+    <dimen name="touch_min">48dp</dimen>       <!-- 无障碍最小可点触达 -->
+</resources>

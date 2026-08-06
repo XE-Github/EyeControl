@@ -1,7 +1,7 @@
 package com.eyecontrol.app
 
 import android.app.Activity
-import android.app.AlertDialog
+import androidx.appcompat.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -14,6 +14,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,7 +36,10 @@ import java.util.Locale
  */
 object FeedbackDialog {
 
-    private const val PAD = 20   // dp,视觉留白
+    private const val PAD = 20        // dp,视觉留白
+    // 字阶(与设计系统 dimens 对齐:正文 14sp、说明 12sp),对话框内代码建视图用。
+    private const val TEXT_BODY = 14f
+    private const val TEXT_CAPTION = 12f
 
     fun show(activity: Activity) {
         val dp = activity.resources.displayMetrics.density
@@ -58,28 +63,32 @@ object FeedbackDialog {
         val diagCheck = CheckBox(activity).apply {
             text = "附带诊断信息(版本 / 机型 / 检测运行状态,绝不含任何画面或人脸)"
             isChecked = true
-            textSize = 13f
+            textSize = TEXT_BODY
         }
         root.addView(diagCheck, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { topMargin = px(8) })
 
         val privacyHint = TextView(activity).apply {
-            text = "🔒 只上传你写的文字和(可选)运行状态,绝不上传任何摄像头画面。离线也能发,联网后会自动送达。"
-            textSize = 12f
+            text = "🔒 只上传你写的文字和(可选)运行状态,绝不上传任何摄像头画面;离线也能发,联网后会自动送达。"
+            textSize = TEXT_CAPTION
             setPadding(0, px(8), 0, 0)
         }
         root.addView(privacyHint)
 
+        // 「我的反馈」入口:强调色 + ≥48dp 触达,读起来像可点的链接。
         val myBtn = TextView(activity).apply {
             text = "查看「我的反馈」›"
-            textSize = 13f
+            textSize = TEXT_BODY
+            setTextColor(ContextCompat.getColor(activity, R.color.accent))
+            gravity = Gravity.CENTER_VERTICAL
+            minHeight = px(48)
             setPadding(0, px(12), 0, 0)
             setOnClickListener { showMyFeedback(activity) }
         }
         root.addView(myBtn)
 
-        val dialog = AlertDialog.Builder(activity)
+        val dialog = MaterialAlertDialogBuilder(activity)
             .setTitle("反馈 / 报告问题")
             .setView(wrapScroll(activity, root))
             .setPositiveButton("发送", null)   // 手动接管,防空文本时自动关闭
@@ -110,7 +119,7 @@ object FeedbackDialog {
 
     /** delivered:云端已确认,显编号 + 复制。 */
     private fun showDelivered(activity: Activity, fid: String) {
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle("已收到,感谢反馈!")
             .setMessage("反馈编号:\n$fid\n\n凭此编号可向作者追问处理进度。")
             .setPositiveButton("复制编号") { _, _ -> copy(activity, fid, "反馈编号已复制") }
@@ -120,9 +129,9 @@ object FeedbackDialog {
 
     /** queued:未确认送达(离线/超时/灰度)。【无编号、无"失败"字样】——已进队列,保证补发。 */
     private fun showQueued(activity: Activity) {
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle("已保存 ✓")
-            .setMessage("反馈已保存到本机。当前可能没有网络,联网后会自动发送;成功后可在「我的反馈」里看到编号。")
+            .setMessage("反馈已保存到本机;当前可能没有网络,联网后会自动发送,成功后可在「我的反馈」里看到编号。")
             .setPositiveButton("好的", null)
             .show()
     }
@@ -146,8 +155,8 @@ object FeedbackDialog {
 
         if (delivered.isEmpty() && pending.isEmpty()) {
             box.addView(TextView(activity).apply {
-                text = "还没有反馈记录。遇到问题随时来提,离线也能发哦。"
-                textSize = 14f
+                text = "还没有反馈记录。遇到问题随时来提,离线也能发。"
+                textSize = TEXT_BODY
             })
         } else {
             if (pending.isNotEmpty()) {
@@ -165,7 +174,7 @@ object FeedbackDialog {
             }
         }
 
-        AlertDialog.Builder(activity)
+        MaterialAlertDialogBuilder(activity)
             .setTitle("我的反馈")
             .setView(wrapScroll(activity, box))
             .setPositiveButton("关闭", null)
@@ -180,20 +189,23 @@ object FeedbackDialog {
     private fun sectionLabel(ctx: Context, topPx: Int, textOf: () -> String): TextView =
         TextView(ctx).apply {
             text = textOf()
-            textSize = 12f
+            textSize = TEXT_CAPTION
             setPadding(0, topPx, 0, (ctx.resources.displayMetrics.density * 4).toInt())
         }
 
-    /** 一条记录:标题 + fid(可选点按复制)。 */
+    /** 一条记录:标题 + fid(可选点按复制)。可点行补足 ≥48dp 触达。 */
     private fun itemRow(activity: Activity, title: String, sub: String, copyable: Boolean): View {
-        val vpad = (activity.resources.displayMetrics.density * 6).toInt()
+        val dp = activity.resources.displayMetrics.density
+        val vpad = (dp * 6).toInt()
         return LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, vpad, 0, vpad)
-            addView(TextView(activity).apply { text = title; textSize = 14f })
+            if (copyable) minimumHeight = (dp * 48).toInt()
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(activity).apply { text = title; textSize = TEXT_BODY })
             addView(TextView(activity).apply {
                 text = if (copyable) "$sub(点按复制)" else sub
-                textSize = 12f
+                textSize = TEXT_CAPTION
             })
             if (copyable) setOnClickListener { copy(activity, sub, "反馈编号已复制") }
         }

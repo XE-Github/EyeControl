@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  EyeControl 调色板(GitHub-dark 基调)—— 全 App 单一事实源。
+  过去这些 hex 散落在 activity_main.xml / MainActivity.kt / 各 dot 形状里十几处;
+  现统一为命名 token,XML 走 @color/xxx、Kotlin 走 ContextCompat.getColor(R.color.xxx),
+  改一处即全局生效,杜绝"同一个灰在两处写成两个值"的漂移。
+-->
+<resources>
+    <!-- 背景与表面 -->
+    <color name="bg">#0D1117</color>          <!-- 页面底色 -->
+    <color name="surface">#161B22</color>      <!-- 卡片面,略亮于 bg,靠明度差分层 -->
+    <color name="divider">#30363D</color>      <!-- 分隔线 / 卡片描边 -->
+
+    <!-- 文字 -->
+    <color name="textPrimary">#E6EDF3</color>   <!-- 主文字 -->
+    <color name="textSecondary">#8B949E</color> <!-- 次要文字 / 说明 -->
+
+    <!-- 语义色 -->
+    <color name="accent">#2F81F7</color>   <!-- 主色(蓝):主按钮、控件选中态;与悬浮窗 dot_blue 同值 -->
+    <color name="onAccent">#FFFFFF</color>  <!-- 主色之上的文字 -->
+    <color name="success">#3FB950</color>  <!-- 就绪 / 隐私提示绿;与 dot_green 同值 -->
+    <color name="warn">#D29922</color>     <!-- 学习中 / 恢复中琥珀;与 dot_amber 同值 -->
+    <color name="danger">#F85149</color>   <!-- 停止 / 危险动作红 -->
+
+    <!-- 半透明底纹(提示条) -->
+    <color name="privacyBannerBg">#143FB950</color>  <!-- 隐私提示绿底(约 8% 透明绿) -->
+    <color name="warnBannerBg">#22D29922</color>     <!-- 恢复中琥珀底 -->
+</resources>

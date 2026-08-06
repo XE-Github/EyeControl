@@ -1,7 +1,7 @@
 package com.eyecontrol.app
 
-import android.app.AlertDialog
 import android.content.Context
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
  * 首次启动的匿名统计【同意门】。
@@ -23,7 +23,7 @@ object ConsentDialog {
         if (cur == "granted") { onDone(true); return }
         if (cur == "declined") { onDone(false); return }
 
-        AlertDialog.Builder(ctx)
+        MaterialAlertDialogBuilder(ctx)
             .setTitle("帮助改进(匿名)")
             .setMessage(
                 "为了了解有多少人在用、值不值得继续做得更好,想匿名统计一点点信息:\n\n" +

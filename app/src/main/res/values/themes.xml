@@ -1,6 +1,95 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      应用主题:沿用 Material3 深色基调(GitHub-dark)。
+      这里把调色板挂到 Material/框架的语义 attr 上,让默认控件(SeekBar 轨道、
+      RadioButton 选中环、按钮涟漪等)自动取到 App 的强调色,而不是 M3 默认紫。
+      statusBar 由过去的纯黑改为与页面同底 @color/bg,消除顶部色差。
+    -->
     <style name="Theme.EyeControl" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@android:color/black</item>
+        <!-- 强调色与表面 -->
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/onAccent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/textPrimary</item>
+
+        <!-- 背景 -->
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:windowBackground">@color/bg</item>
+
+        <!-- 文字默认色 -->
+        <item name="android:textColorPrimary">@color/textPrimary</item>
+        <item name="android:textColorSecondary">@color/textSecondary</item>
+
+        <!-- 控件(SeekBar 滑块/激活轨、RadioButton 选中态)取强调色;
+             未选态取可见灰,避免在深色底上近乎不可见。 -->
+        <item name="colorControlActivated">@color/accent</item>
+        <item name="colorControlNormal">@color/textSecondary</item>
+
+        <!-- 状态栏与页面同底 -->
+        <item name="android:statusBarColor">@color/bg</item>
     </style>
+
+    <!-- ── 文本字阶(TextAppearance)────────────────────────────────
+         统一字号字重:页面主标题 / 卡片标题加粗,正文与说明常规。 -->
+    <style name="TextAppearance.EyeControl.Title" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/textPrimary</item>
+    </style>
+
+    <style name="TextAppearance.EyeControl.Headline" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/textPrimary</item>
+    </style>
+
+    <style name="TextAppearance.EyeControl.Label" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">@dimen/text_label</item>
+        <item name="android:textColor">@color/textPrimary</item>
+    </style>
+
+    <style name="TextAppearance.EyeControl.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/textSecondary</item>
+    </style>
+
+    <style name="TextAppearance.EyeControl.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/textSecondary</item>
+    </style>
+
+    <!-- ── 按钮层级(逐控件 style= 应用,不设全局默认)──────────────
+         主 CTA=Filled 实心主色;授权/检查更新=Tonal 中强调;反馈=Text 低强调;
+         停止=Tonal 但染红,危险但不喧宾夺主。全部继承 M3、自带 ≥48dp 触达。 -->
+    <style name="Btn.Primary" parent="Widget.Material3.Button">
+        <item name="android:textSize">@dimen/text_headline</item>
+    </style>
+
+    <style name="Btn.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+
+    <style name="Btn.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textSize">@dimen/text_body</item>
+    </style>
+
+    <!-- 停止:Tonal 底 + 危险红文字/涟漪,与主 CTA 同尺寸并排不违和 -->
+    <style name="Btn.Stop" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:textSize">@dimen/text_headline</item>
+        <item name="android:textColor">@color/danger</item>
+        <item name="rippleColor">@color/danger</item>
+    </style>
+
+    <!-- ── 对话框主题叠加(可选,供 Feedback/Consent 统一深色观感)──────
+         标题/正文/按钮色对齐 App 调色板,避免框架默认在深色底出现低对比。 -->
+    <style name="ThemeOverlay.EyeControl.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/textPrimary</item>
+        <item name="android:textColorPrimary">@color/textPrimary</item>
+        <item name="android:textColorSecondary">@color/textSecondary</item>
+    </style>
+
 </resources>

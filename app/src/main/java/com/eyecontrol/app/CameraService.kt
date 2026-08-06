@@ -42,6 +42,11 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
         private const val NOTIF_ID = 1001
         const val ACTION_STOP = "com.eyecontrol.app.STOP"
 
+        // 检测运行态变化时发的内部广播(限本包、不导出)。MainActivity 监听它把开始/停止
+        // 按钮态实时校正到真实态——因为 start/stopSelf 都是异步的,单靠 onResume 快照会滞后。
+        const val ACTION_STATE = "com.eyecontrol.app.STATE"
+        const val EXTRA_RUNNING = "running"
+
         @Volatile var running = false
             private set
 
@@ -152,6 +157,7 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
             startCamera(path)
         }
         running = true
+        broadcastState(true)   // 起来了,通知主界面把「开始」按钮切成运行态
         // 验证阶段用 NOT_STICKY:被系统杀掉后不自动重启(重启时可能权限已变),由用户重新点开始。
         return START_NOT_STICKY
     }
@@ -289,8 +295,19 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
         mainExec.execute { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
     }
 
+    /** 广播当前运行态给主界面(限本包、不导出)。失败静默——校正是锦上添花,onResume 快照兜底。 */
+    private fun broadcastState(isRunning: Boolean) {
+        try {
+            sendBroadcast(Intent(ACTION_STATE).apply {
+                setPackage(packageName)
+                putExtra(EXTRA_RUNNING, isRunning)
+            })
+        } catch (_: Exception) {}
+    }
+
     override fun onDestroy() {
         running = false
+        broadcastState(false)   // 停了,通知主界面把「停止」按钮复位、「开始」恢复可用
         liveDetector = null
         liveAnalyzer = null
         if (swipeStatRegistered) {

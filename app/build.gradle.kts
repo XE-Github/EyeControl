@@ -29,8 +29,8 @@ android {
         applicationId = "com.eyecontrol.app"
         minSdk = 26              // dispatchGesture 需 API24+；26 覆盖绝大多数在用机型且省心
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
 
         // 令牌注入 BuildConfig.ANALYTICS_TOKEN(空串=灰度不上报)。
         buildConfigField("String", "ANALYTICS_TOKEN", "\"$analyticsToken\"")

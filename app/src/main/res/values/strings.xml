@@ -2,6 +2,43 @@
 <resources>
     <string name="app_name">眨眼控制</string>
     <string name="accessibility_label">眨眼控制 · 滑动</string>
-    <string name="accessibility_desc">开启后，眨眼控制可模拟上下滑动，帮你在短视频里翻页。仅在你点“开始”后生效，画面仅本机处理、不上传。</string>
-    <string name="privacy_analytics">本应用仅收集匿名活跃统计（随机编号、App 版本、手机型号、打开时间），绝不收集摄像头画面、人脸或任何个人身份信息；是否同意都不影响功能。</string>
+    <string name="accessibility_desc">开启后,眨眼控制可模拟上下滑动,帮你在短视频里翻页。仅在你点「开始」后生效,画面仅本机处理、不上传。</string>
+    <string name="privacy_analytics">本应用仅收集匿名活跃统计(随机编号、App 版本、手机型号、打开时间),绝不收集摄像头画面、人脸或任何个人身份信息;是否同意都不影响功能。</string>
+
+    <!-- ── 主界面文案(收进资源,便于统一复查、且与 MainActivity 共用同源)── -->
+    <string name="main_tagline">连眨 3 下翻到下一个,闭眼保持约 0.5 秒回到上一个。全自动,无需校准。</string>
+    <string name="privacy_local">🔒 摄像头画面仅在本机处理,不保存、不上传。</string>
+
+    <!-- 卡片标题 -->
+    <string name="card_prepare">准备</string>
+    <string name="card_settings">翻页设置</string>
+    <string name="card_about">关于</string>
+
+    <!-- 权限项 -->
+    <string name="perm_camera">摄像头</string>
+    <string name="perm_overlay">悬浮窗</string>
+    <string name="perm_a11y">无障碍(用于滑动翻页)</string>
+    <string name="btn_grant_camera">授权摄像头</string>
+    <string name="btn_grant_overlay">开启悬浮窗权限</string>
+    <string name="btn_grant_a11y">去开启无障碍</string>
+    <string name="perm_all_ready">✅ 一切就绪,可以开始</string>
+    <string name="perm_expand_hint">点此展开查看各项状态</string>
+    <string name="a11y_recover_hint">更新后无障碍偶尔需要重新连接,正在自动恢复,请稍候几秒…(无需任何操作)</string>
+
+    <!-- 权限状态(refresh() 与 XML 共用) -->
+    <string name="status_ready">✅ 已就绪</string>
+    <string name="status_not_enabled">⛔ 未开启</string>
+    <string name="status_reconnecting">🔄 正在自动恢复…</string>
+
+    <!-- 关于 -->
+    <string name="version_prefix">当前版本 v</string>
+    <string name="btn_check_update">检查更新</string>
+    <string name="btn_feedback">反馈 / 报告问题</string>
+
+    <!-- 底部主操作与提示 -->
+    <string name="btn_start">开始</string>
+    <string name="btn_stop">停止</string>
+    <string name="hint_need_grant">请先完成上方三项授权</string>
+    <string name="hint_ready">开始后切到抖音 / 快手,连眨即可翻页;悬浮窗会显示实时状态。</string>
+    <string name="hint_running">检测已在运行,切到抖音 / 快手连眨即可翻页。</string>
 </resources>
