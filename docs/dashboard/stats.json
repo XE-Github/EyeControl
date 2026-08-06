@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-06T06:46:33.366Z",
+  "generatedAt": "2026-08-06T09:58:55.430Z",
   "tz": "device-local",
   "today": "2026-08-06",
   "dau": 2,
@@ -134,6 +134,6 @@
     "Xiaomi 25098PN5AC": 1,
     "Xiaomi 23127PN0CC": 1
   },
-  "feedbackTotal": 10,
+  "feedbackTotal": 12,
   "note": "did 随机匿名,卸载重装会变→活跃偏高;仅统计能连通 Gitee 的设备。"
 }
