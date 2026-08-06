@@ -44,6 +44,38 @@ class MainActivity : AppCompatActivity() {
     // 无障碍三态:未开启 / 恢复中(已开但系统尚未重绑,常见于重装后) / 就绪
     private enum class A11yState { NOT_ENABLED, RECONNECTING, READY }
 
+    companion object {
+        /**
+         * 无障碍连接态静态判定,返回 "NOT_ENABLED" / "RECONNECTING" / "READY"。
+         * 抽成静态是为了让 Diagnostics(反馈诊断快照)复用【同一份判定逻辑】,
+         * 避免两处漂移。判定细节见 MainActivity.a11yState() 的注释。
+         */
+        fun a11yStateOf(ctx: Context): String {
+            val am = ctx.getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+            val me = "${ctx.packageName}/${SwipeAccessibilityService::class.java.name}"
+
+            val enabledSetting = Settings.Secure.getString(
+                ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: ""
+            var inSetting = false
+            val splitter = TextUtils.SimpleStringSplitter(':')
+            splitter.setString(enabledSetting)
+            for (s in splitter) if (s.equals(me, ignoreCase = true)) { inSetting = true; break }
+            if (!inSetting || !am.isEnabled) return "NOT_ENABLED"
+
+            val running = try {
+                am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+                    .any {
+                        val si = it.resolveInfo?.serviceInfo ?: return@any false
+                        si.packageName == ctx.packageName &&
+                            si.name == SwipeAccessibilityService::class.java.name
+                    }
+            } catch (_: Exception) { false }
+
+            return if (running) "READY" else "RECONNECTING"
+        }
+    }
+
     // 自动恢复轮询:进 App 时若发现"已开但没绑上",系统会在数秒内自动重绑,
     // 这里静默轮询、绑上就转 ✅,全程不需要用户动手。
     private val ui = Handler(Looper.getMainLooper())
@@ -87,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         // 当前版本 + 手动检查更新
         findViewById<TextView>(R.id.versionLabel).text = "当前版本 v${BuildConfig.VERSION_NAME}"
         findViewById<Button>(R.id.updateBtn).setOnClickListener { checkUpdate(manual = true) }
+        findViewById<Button>(R.id.feedbackBtn).setOnClickListener { FeedbackDialog.show(this) }
 
         startBtn.setOnClickListener { startDetection() }
         stopBtn.setOnClickListener {
@@ -126,6 +159,10 @@ class MainActivity : AppCompatActivity() {
         // 日活埋点:每次回到前台都尝试记一次 app_open(内部按"每设备每天一次"节流,
         // 且未同意直接零采集)。放这里能覆盖"同意后隔天再打开"的日子,不只首启。
         Analytics.trackAppOpen(this)
+
+        // 反馈队列前台补发:每次回前台扫本地队列,有网就把离线/超时留下的反馈补发出去。
+        // 全程 daemon + 静默,灰度(令牌空)直接跳过留队列。这是"离线也能发、绝不失败"的补发钩子之一。
+        Feedback.flushQueue(this)
     }
 
     /** 启动时静默检查:每天最多一次(记日期戳);仅发现新版才弹框,无新版/失败不打扰。 */
@@ -286,32 +323,10 @@ class MainActivity : AppCompatActivity() {
      * - 是否"真正在跑":读 getEnabledAccessibilityServiceList(系统只返回当前真正绑定的服务,
      *   crashed 的会被排除)。二者之差 = "已开但故障(恢复中)"。
      */
-    private fun a11yState(): A11yState {
-        val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-        val me = "$packageName/${SwipeAccessibilityService::class.java.name}"
-
-        // ① 用户是否开过(设置字符串)
-        val enabledSetting = Settings.Secure.getString(
-            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: ""
-        var inSetting = false
-        val splitter = TextUtils.SimpleStringSplitter(':')
-        splitter.setString(enabledSetting)
-        for (s in splitter) if (s.equals(me, ignoreCase = true)) { inSetting = true; break }
-        if (!inSetting || !am.isEnabled) return A11yState.NOT_ENABLED
-
-        // ② 是否真正绑定在跑(排除 crashed)
-        val running = try {
-            am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-                .any {
-                    val si = it.resolveInfo?.serviceInfo ?: return@any false
-                    si.packageName == packageName &&
-                        si.name == SwipeAccessibilityService::class.java.name
-                }
-        } catch (_: Exception) { false }
-
-        // 已开但没绑上 = 重装后的 crashed 态,系统会在打开本 App 后数秒内自动重绑。
-        return if (running) A11yState.READY else A11yState.RECONNECTING
+    private fun a11yState(): A11yState = when (a11yStateOf(this)) {
+        "NOT_ENABLED" -> A11yState.NOT_ENABLED
+        "RECONNECTING" -> A11yState.RECONNECTING
+        else -> A11yState.READY
     }
 
     private fun refresh() {

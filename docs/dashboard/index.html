@@ -25,6 +25,7 @@
   .card .num.dau { color:var(--accent); }
   .card .num.wau { color:var(--up); }
   .card .num.tot { color:var(--ok); }
+  .card .num.fb { color:var(--warn); }
   .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:20px; }
   .panel h2 { font-size:15px; margin:0 0 14px; color:var(--text); font-weight:600; }
   svg { width:100%; height:180px; display:block; }
@@ -82,6 +83,7 @@
     <li>🌐 只统计能连通上报服务器的设备;连不上的设备会静默丢弃 → 绝对值可能<b>偏低</b>。</li>
     <li>🔒 只收集匿名编号 / App 版本 / 机型 / 打开时间;<b>绝不</b>收集任何摄像头画面、人脸或个人身份信息。</li>
     <li>🕗 计日按<b>设备本地时区</b>;看板由定时任务聚合,<b>非实时</b>。</li>
+    <li>📮 「收到反馈」<b>只统计条数</b>;反馈正文<b>仅作者可见</b>,看板与聚合脚本<b>绝不</b>读取或展示任何反馈内容。</li>
   </ul>
   <div class="gen" id="gen"></div>
 </div>
@@ -129,6 +131,7 @@ function render(d){
       <div class="card"><div class="label">今日活跃 DAU</div><div class="num dau">${d.dau ?? '—'}</div></div>
       <div class="card"><div class="label">近7天活跃 WAU</div><div class="num wau">${d.wau ?? '—'}</div></div>
       <div class="card"><div class="label">今日机型数</div><div class="num tot">${Object.keys(d.models||{}).length}</div></div>
+      <div class="card"><div class="label">收到反馈(近30天)</div><div class="num fb">${d.feedbackTotal ?? '—'}</div></div>
     </div>
     <div class="panel"><h2>近 30 天日活趋势</h2>${renderSpark(d.dau30)}</div>
     <div class="panel"><h2>今日版本分布</h2>${renderBars(d.versions)}</div>

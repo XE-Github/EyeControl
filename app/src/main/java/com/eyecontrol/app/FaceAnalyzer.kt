@@ -102,6 +102,22 @@ class FaceAnalyzer(
     private var maxProcMs = 0L
     private var maxAnalyzeMs = 0L
     private var inFlightTs = 0L
+    // ---- 只读诊断暴露(供 Diagnostics 组反馈快照)----
+    // 上面 maxProcMs/maxAnalyzeMs/winFrames 每 2s 窗清零(:242),取不到"整会话峰值/末窗 fps"。
+    // 下列字段【全程不清零】(everBusy 首次翻 true 后不再回落),给诊断一个"这台设备这次跑得如何"的稳定切面。
+    // 全 @Volatile:写在 analysisExecutor 单线程(onResult/build 构造),主进程 Diagnostics 只读——与既有约定一致。
+    @Volatile private var peakProcMsEver = 0L
+    @Volatile private var peakAnalyzeMsEver = 0L
+    @Volatile private var lastFps = 0.0
+    @Volatile private var everBusy = false
+    @Volatile private var activeDelegate = "gpu"   // GPU 初始化失败回退 CPU 时改 "cpu"
+    fun diagPeakProcMs(): Long = peakProcMsEver
+    fun diagPeakAnalyzeMs(): Long = peakAnalyzeMsEver
+    fun diagFps(): Double = lastFps
+    fun diagEverBusy(): Boolean = everBusy
+    fun diagDelegate(): String = activeDelegate
+    fun diagFrames(): Int = frameCount
+    fun diagFaces(): Int = faceCount
     // 【任务#44 收尾 深坑侦测·窗口双通道判据】每 2s 诊断窗末评估:fps<BUSY_FPS 或 峰值procMs>=
     // BUSY_PROC_MS 任一满足即深坑;calmWindows 累计连续健康窗数,连够 BUSY_CLEAR_WINDOWS 才退 busy
     // (迟滞防抖闪)。均在 onResult(analysisExecutor 单线程)读写。此信号只经 onBusyChanged 回调外发,
@@ -124,6 +140,7 @@ class FaceAnalyzer(
         build(Delegate.GPU, modelPath)          // 优先 GPU;失败回退 CPU
     } catch (e: Exception) {
         Log.w(TAG, "GPU 初始化失败,回退 CPU:${e.message}")
+        activeDelegate = "cpu"                   // 诊断:记录实际生效的 delegate(纯观测)
         build(Delegate.CPU, modelPath)
     }
 
@@ -226,6 +243,10 @@ class FaceAnalyzer(
             val fps = winFrames * 1000.0 / (now - lastLogTs).coerceAtLeast(1)
             Log.i(TAG, "帧诊断 fps=${"%.1f".format(fps)} 峰值procMs=$maxProcMs 峰值analyzeMs=$maxAnalyzeMs " +
                 "(累计 frames=$frameCount faces=$faceCount)")
+            // 【只读诊断】整会话峰值/末窗 fps:窗清零前先并入不清零的会话字段(纯观测,不影响判定)。
+            lastFps = fps
+            if (maxProcMs > peakProcMsEver) peakProcMsEver = maxProcMs
+            if (maxAnalyzeMs > peakAnalyzeMsEver) peakAnalyzeMsEver = maxAnalyzeMs
             // 【深坑侦测·窗口双通道兜底】本窗 fps 过低 或 峰值单帧 procMs 过高,任一满足即深坑。
             // 进 busy 立即翻(不等迟滞,深坑要尽快提示);退 busy 要连 BUSY_CLEAR_WINDOWS 个窗都健康
             // (迟滞防抖闪)。只在【翻转沿】调 onBusyChanged 一次。判定挪到窗末与 fps/峰值procMs 同源。
@@ -233,6 +254,7 @@ class FaceAnalyzer(
             // 启动瞬态低 fps 误报(那不是资源争抢,只是还没起流)。尖刺通道靠真实 procMs,无此顾虑。
             val windowBusy = (winFrames >= 2 && fps < BUSY_FPS) || maxProcMs >= BUSY_PROC_MS
             if (windowBusy) {
+                everBusy = true                  // 只读诊断:本会话是否出现过深坑(首次翻 true 不再回落)
                 calmWindows = 0
                 if (!busy) { busy = true; onBusyChanged(true) }
             } else {

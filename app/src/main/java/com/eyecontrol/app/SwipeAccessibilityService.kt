@@ -33,7 +33,16 @@ class SwipeAccessibilityService : AccessibilityService() {
         const val ACTION_SWIPE = "com.eyecontrol.app.SWIPE"
         /** true=下一个(下→上滑);false=上一个(上→下滑)。 */
         const val EXTRA_NEXT = "next"
+
+        /** 本服务【回传】滑动结果给主进程(诊断用):a11y 独立进程,主进程静态读不到 dispatch 成败。 */
+        const val ACTION_SWIPE_STAT = "com.eyecontrol.app.SWIPE_STAT"
+        const val EXTRA_OK = "ok"     // 累计 dispatchGesture 返回 true 的次数
+        const val EXTRA_FAIL = "fail" // 累计返回 false / 被取消 的次数
     }
+
+    // dispatchGesture 成败累计(仅本 :a11y 进程内计,经广播回传主进程缓存供诊断)。
+    private var swipeOk = 0
+    private var swipeFail = 0
 
     // 收到 CameraService 的滑动广播 → 执行滑动。注册在 :a11y 进程,拿得到本服务实例。
     private val swipeReceiver = object : BroadcastReceiver() {
@@ -110,11 +119,25 @@ class SwipeAccessibilityService : AccessibilityService() {
             val ok = dispatchGesture(gesture, object : GestureResultCallback() {
                 override fun onCancelled(g: GestureDescription?) {
                     Log.w(TAG, "手势被取消")
+                    swipeFail++; sendSwipeStat()   // 异步取消也算一次失败,回传更新
                 }
             }, null)
-            if (!ok) Log.w(TAG, "dispatchGesture 返回 false(可能未开启无障碍手势能力)")
+            if (ok) swipeOk++ else { swipeFail++; Log.w(TAG, "dispatchGesture 返回 false(可能未开启无障碍手势能力)") }
+            sendSwipeStat()
         } catch (e: Exception) {
             Log.e(TAG, "verticalSwipe 出错:${e.message}")
         }
+    }
+
+    /** 把最新滑动累计回传主进程(内部广播,setPackage 限定;失败静默,绝不影响滑动)。 */
+    private fun sendSwipeStat() {
+        try {
+            sendBroadcast(
+                Intent(ACTION_SWIPE_STAT)
+                    .setPackage(packageName)
+                    .putExtra(EXTRA_OK, swipeOk)
+                    .putExtra(EXTRA_FAIL, swipeFail)
+            )
+        } catch (_: Exception) {}
     }
 }

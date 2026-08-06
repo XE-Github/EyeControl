@@ -19,3 +19,7 @@ keystore.properties
 *.png
 ui.xml
 ui2.xml
+build-ui.xml
+
+# 打包产物走 Release 附件，不进仓库
+EyeControl-v*.apk

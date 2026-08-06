@@ -212,6 +212,7 @@ class BlinkDetector(private val listener: Listener) {
         lastFrameTs = 0L
         driftSince = 0.0
         highRateUntilTs = 0L
+        maxBlinkStreak = 0   // 纯观测计数器随会话复位(判定无关)
     }
 
     private fun dist(ax: Float, ay: Float, bx: Float, by: Float): Double =
@@ -536,6 +537,7 @@ class BlinkDetector(private val listener: Listener) {
         if (lastStart != null && startTs - lastStart < minGapInGroup) return
         blinkGroup.add(startTs)
         listener.onCount(blinkGroup.size)
+        maxBlinkStreak = max(maxBlinkStreak, blinkGroup.size)   // 纯观测:记本会话最长连眨,判定不读它
         // 即时触发:一到 nextN 下就立刻收尾发 NEXT,不再等 window 超时。
         // 这消除了"眨完第3下到真正下滑之间的那段等待"(真人反馈"感觉有点长")——
         // 那段延迟本质是 finalizeGroup 的 window 收尾窗口。达阈值即发,无尾等。
@@ -580,4 +582,17 @@ class BlinkDetector(private val listener: Listener) {
         val i = min(s.size - 1, max(0, (q * (s.size - 1)).toInt()))
         return s[i]
     }
+
+    // ---- 只读诊断暴露(供 Diagnostics 组反馈快照)----
+    // 全是【只读 getter / 纯观测计数器】,不加 setter、不进任何判定分支,绝不改检测行为。
+    // maxBlinkStreak:本会话观测到的"单组最长连眨下数"(纯统计,判定不读它)。
+    private var maxBlinkStreak = 0
+    fun diagReady(): Boolean = ready
+    fun diagBaseline(): Double = baseline
+    fun diagOpenLevel(): Double = lastOpenLevel
+    fun diagNoiseUp(): Double = noiseUp
+    fun diagPeakDrop(): Double = peakDrop
+    fun diagDynEnter(): Double = dynEnter
+    fun diagDynExit(): Double = dynExit
+    fun diagMaxStreak(): Int = maxBlinkStreak
 }

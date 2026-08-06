@@ -97,6 +97,9 @@ async function main() {
   const dau30 = [];
   const wauSet = new Set();
   let todayEntries = [];
+  // 反馈计数:近 30 天 feedback/<day>/ 下的 .json 文件数之和。
+  // 【红线】只 listDir 数条数,绝不 getFileContent 读反馈正文——聚合脚本永不触碰任何反馈内容。
+  let feedbackTotal = 0;
 
   for (let i = 29; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 86400000);
@@ -106,6 +109,12 @@ async function main() {
     dau30.push({ day, count: dids.size });
     if (i <= 6) for (const x of dids) wauSet.add(x);   // 近 7 天并集 = WAU
     if (day === today) todayEntries = entries;
+
+    // 只数反馈条数(文件名以 .json 结尾),不读内容。
+    const fbEntries = await listDir(`feedback/${day}`);
+    feedbackTotal += fbEntries.filter(
+      (e) => e.type === "file" && e.name.endsWith(".json")
+    ).length;
   }
   const dau = dau30[dau30.length - 1].count;
   const wau = wauSet.size;
@@ -137,12 +146,13 @@ async function main() {
     dau30,
     versions,
     models,
+    feedbackTotal,                // 近 30 天收到的反馈条数(只计数,绝不含任何反馈正文)
     note: "did 随机匿名,卸载重装会变→活跃偏高;仅统计能连通 Gitee 的设备。",
   };
 
   mkdirSync(dirname(OUT) === "" ? "." : dirname(OUT), { recursive: true });
   writeFileSync(OUT, JSON.stringify(out, null, 2), "utf-8");
-  console.log(`已写 ${OUT}: DAU=${dau} WAU=${wau} (today=${today})`);
+  console.log(`已写 ${OUT}: DAU=${dau} WAU=${wau} 反馈=${feedbackTotal} (today=${today})`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

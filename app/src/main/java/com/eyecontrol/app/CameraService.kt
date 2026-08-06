@@ -46,10 +46,29 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
             private set
 
         /**
-         * 【仅供 debug 注入用】指向当前运行中的 detector。debug 包的 DebugBlinkReceiver 拿它
-         * 回放脚本化 EAR 序列做全自主测试。release 不引用(仅 src/debug 源集读取)。
+         * 【debug 注入 + release 诊断只读】指向当前运行中的 detector。
+         * debug 包的 DebugBlinkReceiver 拿它回放脚本化 EAR 序列做全自主测试;
+         * release 侧 Diagnostics 也只读它取检测态(全是只读 getter,绝不改判定)。服务没跑时为 null。
          */
         @Volatile var liveDetector: BlinkDetector? = null
+
+        /** 当前运行中的分析器(release 诊断只读:fps/峰值procMs/delegate 等);服务没跑时为 null。 */
+        @Volatile var liveAnalyzer: FaceAnalyzer? = null
+
+        // 本检测会话累计命中(纯观测,供诊断快照)。每次 onStartCommand 起始清零 = 报"本会话"。
+        @Volatile var nextHits = 0
+            private set
+        @Volatile var prevHits = 0
+            private set
+        @Volatile var recalibrations = 0
+            private set
+
+        // 跨进程滑动结果缓存(-1=从未收到 a11y 回传)。a11y 在 :a11y 独立进程,dispatch 成败
+        // 主进程静态读不到,靠 SwipeAccessibilityService 发内部广播回传,此处缓存供诊断读。
+        @Volatile var a11ySwipeOk = -1
+            private set
+        @Volatile var a11ySwipeFail = -1
+            private set
     }
 
     private lateinit var detector: BlinkDetector
@@ -60,6 +79,16 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
     // ContextCompat.getMainExecutor 兼容 minSdk26(Context.getMainExecutor 需 API28)
     private val mainExec by lazy { ContextCompat.getMainExecutor(this) }
 
+    // 接收 :a11y 进程回传的滑动累计,缓存到 companion 供诊断读(失败静默)。
+    private val swipeStatReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: android.content.Context?, intent: Intent?) {
+            intent ?: return
+            a11ySwipeOk = intent.getIntExtra(SwipeAccessibilityService.EXTRA_OK, a11ySwipeOk)
+            a11ySwipeFail = intent.getIntExtra(SwipeAccessibilityService.EXTRA_FAIL, a11ySwipeFail)
+        }
+    }
+    private var swipeStatRegistered = false
+
     override fun onCreate() {
         super.onCreate()
         detector = BlinkDetector(this).apply {
@@ -68,6 +97,19 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
             bias = Prefs.biasOf(Prefs.sens(this@CameraService))
         }
         liveDetector = detector
+        // 注册滑动结果回传接收器(内部广播,不导出)。失败静默,不影响主功能。
+        try {
+            val filter = android.content.IntentFilter(SwipeAccessibilityService.ACTION_SWIPE_STAT)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(swipeStatReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                @Suppress("UnspecifiedRegisterReceiverFlag")
+                registerReceiver(swipeStatReceiver, filter)
+            }
+            swipeStatRegistered = true
+        } catch (e: Exception) {
+            Log.e(TAG, "注册滑动回传接收器失败:${e.message}")
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -84,6 +126,17 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
             Log.e(TAG, "悬浮窗创建失败(可能权限被撤销):${e.message}")
         }
         detector.reset()
+        // 本会话诊断计数清零(报"本次检测运行"的命中,不跨会话累加)。
+        nextHits = 0; prevHits = 0; recalibrations = 0
+
+        // 反馈队列补发挂载点:检测运行期间周期扫本地队列,有网就把待发反馈补发出去。
+        // 与主功能同生命周期(lifecycleScope,服务销毁自动取消),全程静默、绝不阻塞检测。
+        lifecycleScope.launch {
+            while (true) {
+                try { Feedback.flushQueue(this@CameraService) } catch (_: Exception) {}
+                kotlinx.coroutines.delay(60_000L)   // 每 60s 补发一轮
+            }
+        }
 
         // 模型可能需首次下载,放后台线程;就绪后再拉起相机(在主线程)。
         lifecycleScope.launch {
@@ -114,6 +167,7 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
                 // 绝不写回 detector(守 harness 绕过 FaceAnalyzer 仍能测判定路径的不变式)。
                 // 回调在 analysisExecutor 单线程触发,overlay.setBusy 内部走 post{} 切主线程,安全。
                 analyzer = FaceAnalyzer(this, modelPath, detector, onBusyChanged = { b -> overlay?.setBusy(b) })
+                liveAnalyzer = analyzer   // 诊断只读挂载(onDestroy 清空)
 
                 // 【性能·治抖音前台慢半拍】显式限低分析分辨率到 480×360(4:3)。
                 // 默认不设分辨率时 CameraX 给 ~640×480+,每帧 toBitmap 全尺寸拷贝在抖音抢
@@ -172,15 +226,17 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
     override fun onEyeState(open: Boolean) { Log.i(TAG, if (open) "睁" else "闭"); overlay?.setEye(open) }
     override fun onCount(n: Int) { Log.i(TAG, "连眨计数=$n"); overlay?.setCount(n) }
     override fun onHoldProgress(fraction: Float) { overlay?.setHoldProgress(fraction) }
-    override fun onRecalibrated() { Log.i(TAG, "环境突变已自动重校准") }
+    override fun onRecalibrated() { recalibrations++; Log.i(TAG, "环境突变已自动重校准") }
 
     override fun onNext() {
+        nextHits++
         Log.i(TAG, "★命中:下一个(连眨 ≥${detector.nextN} 下)→ 发滑动广播")
         overlay?.flash("⬆ 下一个")
         sendSwipe(next = true)
     }
 
     override fun onPrev() {
+        prevHits++
         Log.i(TAG, "★命中:上一个(闭眼保持 ${detector.holdMs}ms)→ 发滑动广播")
         overlay?.flash("⬇ 上一个")
         sendSwipe(next = false)
@@ -236,6 +292,11 @@ class CameraService : LifecycleService(), BlinkDetector.Listener {
     override fun onDestroy() {
         running = false
         liveDetector = null
+        liveAnalyzer = null
+        if (swipeStatRegistered) {
+            try { unregisterReceiver(swipeStatReceiver) } catch (_: Exception) {}
+            swipeStatRegistered = false
+        }
         try { cameraProvider?.unbindAll() } catch (_: Exception) {}
         analyzer?.close()
         overlay?.remove()

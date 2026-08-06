@@ -135,6 +135,11 @@
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="6dp" android:text="检查更新" />
 
+        <!-- 反馈 / 报告问题：本地不丢队列 + 有网自动补发,离线也能发,绝不失败 -->
+        <Button android:id="@+id/feedbackBtn"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="✍ 反馈 / 报告问题" />
+
         <!-- 开始/停止 -->
         <Button android:id="@+id/startBtn"
             android:layout_width="match_parent" android:layout_height="wrap_content"

@@ -22,6 +22,9 @@ object Prefs {
     private const val K_CONSENT = "consent"              // 匿名统计同意门:""=首启未问 / "granted" / "declined"
     private const val K_DID = "did"                      // 匿名安装标识,"u_"+UUID;仅同意后生成
     private const val K_TRACK_DAY = "lastTrackDay"       // 埋点每设备每天最多上报一次的日期戳
+    private const val K_FBID = "fbid"                    // 反馈标识,"f_"+UUID;独立于埋点 did,仅点发送时懒生成
+    private const val K_FB_DELIVERED = "fbDelivered"     // 已送达反馈表,多行 "fid|ts",最新在前,上限 FB_KEEP 条
+    private const val FB_KEEP = 20
     private const val SCHEMA = 3
     const val HOLD_DEFAULT = 550L
     private const val HOLD_OLD_DEFAULT = 800L
@@ -64,6 +67,52 @@ object Prefs {
     fun lastTrackDay(ctx: Context): String = sp(ctx).getString(K_TRACK_DAY, "") ?: ""
     fun setLastTrackDay(ctx: Context, day: String) =
         sp(ctx).edit().putString(K_TRACK_DAY, day).apply()
+
+    // ---- 用户主动反馈(独立于埋点同意门)----
+    //  反馈是用户【主动知情】的行为(自己点发送),与被动埋点的同意门是两回事:
+    //  未同意匿名统计的用户【也能反馈】。因此反馈标识 fbid 独立于埋点 did,
+    //  绝不复用 getOrCreateDid(那只在 granted 后调),以免"一反馈就生成 did"破坏零采集红线。
+
+    /**
+     * 取反馈标识,没有则生成并持久化。格式 "f_"+UUID。
+     * 【仅在用户点发送那一刻按需调用】——只点开对话框不创建;用户点发送 = 对该条反馈的知情同意。
+     */
+    fun getOrCreateFeedbackId(ctx: Context): String {
+        val p = sp(ctx)
+        val cur = p.getString(K_FBID, "") ?: ""
+        if (cur.isNotEmpty()) return cur
+        val fbid = "f_" + java.util.UUID.randomUUID().toString()
+        p.edit().putString(K_FBID, fbid).apply()
+        return fbid
+    }
+
+    /** 已生成的反馈标识;从未反馈过则空串(不触发生成)。 */
+    fun feedbackId(ctx: Context): String = sp(ctx).getString(K_FBID, "") ?: ""
+
+    /**
+     * 记一条反馈已送达(云端 201 或"文件已存在"幂等)。fid 唯一,重复记入不叠加。
+     * 存最近 FB_KEEP 条 "fid|ts",最新在前;供"我的反馈"列表展示编号。
+     */
+    fun markFeedbackDelivered(ctx: Context, fid: String, ts: Long) {
+        val p = sp(ctx)
+        val kept = deliveredFeedback(ctx).filter { it.first != fid }   // 去掉同 fid 旧记录(幂等)
+        val merged = (listOf(fid to ts) + kept).take(FB_KEEP)
+        val text = merged.joinToString("\n") { "${it.first}|${it.second}" }
+        p.edit().putString(K_FB_DELIVERED, text).apply()
+    }
+
+    /** 已送达反馈列表:[(fid, ts)],最新在前。 */
+    fun deliveredFeedback(ctx: Context): List<Pair<String, Long>> {
+        val raw = sp(ctx).getString(K_FB_DELIVERED, "") ?: ""
+        if (raw.isBlank()) return emptyList()
+        return raw.split("\n").mapNotNull { line ->
+            val i = line.indexOf('|')
+            if (i <= 0) return@mapNotNull null
+            val fid = line.substring(0, i)
+            val ts = line.substring(i + 1).toLongOrNull() ?: return@mapNotNull null
+            fid to ts
+        }
+    }
 
     /**
      * 一次性迁移。
