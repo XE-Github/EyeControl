@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-08-07T00:16:17.326Z",
+  "generatedAt": "2026-08-07T01:44:20.418Z",
   "tz": "device-local",
   "today": "2026-08-07",
-  "dau": 0,
+  "dau": 1,
   "wau": 4,
   "dau30": [
     {
@@ -123,11 +123,15 @@
     },
     {
       "day": "2026-08-07",
-      "count": 0
+      "count": 1
     }
   ],
-  "versions": {},
-  "models": {},
+  "versions": {
+    "1.3": 1
+  },
+  "models": {
+    "Xiaomi 23127PN0CC": 1
+  },
   "feedbackTotal": 12,
   "note": "did 随机匿名,卸载重装会变→活跃偏高;仅统计能连通 Gitee 的设备。"
 }
