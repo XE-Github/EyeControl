@@ -29,7 +29,6 @@ jobs:
         run: node docs/dashboard/aggregate.mjs
 
       - name: 提交 stats.json(仅在有变化时)
-        id: commit
         run: |
           git config user.name "eyecontrol-bot"
           git config user.email "bot@users.noreplace"
@@ -38,19 +37,10 @@ jobs:
           # 旧写法 `git diff <file>` 对未跟踪文件永远判"无差异",会漏掉首次提交。
           if git diff --cached --quiet docs/dashboard/stats.json; then
             echo "无变化,跳过提交"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "chore(stats): 更新活跃数据看板"
             git push
-            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # 同步到 Gitee(国内看板 = Gitee Pages 发布本库,需要最新 stats.json 在 Gitee 库里)。
-      # 用主账号令牌 push;令牌来自 Secret,绝不落盘/回显。仅在数据有变时才 push。
-      - name: 同步 stats.json 到 Gitee
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          GITEE_PUSH_TOKEN: ${{ secrets.GITEE_PUSH_TOKEN }}
-        run: |
-          git push "https://jaxinleon:${GITEE_PUSH_TOKEN}@gitee.com/jaxinleon/EyeControl.git" HEAD:master
-          echo "已同步到 Gitee"
+      # 注:看板仅由 GitHub Pages 发布(Gitee Pages 已停用)。此前的「同步 stats.json 到 Gitee」
+      # 步骤已移除——Gitee 那边没有 Pages 展示看板,推过去无意义,且因非快进 push 每次都让 run 变红。
