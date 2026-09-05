@@ -1,15 +1,11 @@
 {
-  "generatedAt": "2026-09-04T21:29:39.328Z",
+  "generatedAt": "2026-09-05T00:07:05.842Z",
   "ok": true,
   "tz": "device-local",
-  "today": "2026-09-04",
+  "today": "2026-09-05",
   "dau": 0,
   "wau": 1,
   "dau30": [
-    {
-      "day": "2026-08-06",
-      "count": 2
-    },
     {
       "day": "2026-08-07",
       "count": 7
@@ -125,13 +121,13 @@
     {
       "day": "2026-09-04",
       "count": 0
+    },
+    {
+      "day": "2026-09-05",
+      "count": 0
     }
   ],
   "feedback30": [
-    {
-      "day": "2026-08-06",
-      "count": 5
-    },
     {
       "day": "2026-08-07",
       "count": 1
@@ -247,11 +243,15 @@
     {
       "day": "2026-09-04",
       "count": 0
+    },
+    {
+      "day": "2026-09-05",
+      "count": 0
     }
   ],
   "versions": {},
   "models": {},
-  "feedbackTotal": 6,
+  "feedbackTotal": 1,
   "src": {
     "data": "https://gitee.com/jaxinleon_1/eyecontrol-analytics/tree/master/data",
     "feedback": "https://gitee.com/jaxinleon_1/eyecontrol-analytics/tree/master/feedback"
