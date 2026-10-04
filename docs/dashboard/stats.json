@@ -1,15 +1,11 @@
 {
-  "generatedAt": "2026-10-03T23:47:51.206Z",
+  "generatedAt": "2026-10-04T05:54:15.613Z",
   "ok": true,
   "tz": "device-local",
-  "today": "2026-10-03",
-  "dau": 0,
-  "wau": 3,
+  "today": "2026-10-04",
+  "dau": 1,
+  "wau": 4,
   "dau30": [
-    {
-      "day": "2026-09-04",
-      "count": 0
-    },
     {
       "day": "2026-09-05",
       "count": 0
@@ -125,14 +121,14 @@
     {
       "day": "2026-10-03",
       "count": 0
+    },
+    {
+      "day": "2026-10-04",
+      "count": 1
     }
   ],
   "feedback30": [
     {
-      "day": "2026-09-04",
-      "count": 0
-    },
-    {
       "day": "2026-09-05",
       "count": 0
     },
@@ -247,10 +243,18 @@
     {
       "day": "2026-10-03",
       "count": 0
+    },
+    {
+      "day": "2026-10-04",
+      "count": 0
     }
   ],
-  "versions": {},
-  "models": {},
+  "versions": {
+    "1.3": 1
+  },
+  "models": {
+    "samsung SM-S721B": 1
+  },
   "feedbackTotal": 0,
   "src": {
     "data": "https://gitee.com/jaxinleon_1/eyecontrol-analytics/tree/master/data",
