@@ -1,15 +1,11 @@
 {
-  "generatedAt": "2026-10-27T21:20:10.666Z",
+  "generatedAt": "2026-10-28T01:22:54.688Z",
   "ok": true,
   "tz": "device-local",
-  "today": "2026-10-27",
-  "dau": 1,
+  "today": "2026-10-28",
+  "dau": 0,
   "wau": 2,
   "dau30": [
-    {
-      "day": "2026-09-28",
-      "count": 1
-    },
     {
       "day": "2026-09-29",
       "count": 1
@@ -125,13 +121,13 @@
     {
       "day": "2026-10-27",
       "count": 1
+    },
+    {
+      "day": "2026-10-28",
+      "count": 0
     }
   ],
   "feedback30": [
-    {
-      "day": "2026-09-28",
-      "count": 0
-    },
     {
       "day": "2026-09-29",
       "count": 0
@@ -247,14 +243,14 @@
     {
       "day": "2026-10-27",
       "count": 0
+    },
+    {
+      "day": "2026-10-28",
+      "count": 0
     }
   ],
-  "versions": {
-    "1.3": 1
-  },
-  "models": {
-    "Xiaomi 24129PN74C": 1
-  },
+  "versions": {},
+  "models": {},
   "feedbackTotal": 0,
   "src": {
     "data": "https://gitee.com/jaxinleon_1/eyecontrol-analytics/tree/master/data",
